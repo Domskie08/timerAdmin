@@ -3,11 +3,19 @@
 namespace App\Models;
 
 use App\Enums\LicenseStatus;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class License extends Model
 {
+    public const DURATION_OPTIONS = [
+        ['value' => '1_month', 'label' => '1 month', 'months' => 1],
+        ['value' => '3_months', 'label' => '3 months', 'months' => 3],
+        ['value' => '6_months', 'label' => '6 months', 'months' => 6],
+        ['value' => '1_year', 'label' => '1 year', 'months' => 12],
+    ];
+
     protected $fillable = [
         'code',
         'expires_at',
@@ -29,6 +37,38 @@ class License extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public static function durationOptions(): array
+    {
+        return self::DURATION_OPTIONS;
+    }
+
+    public static function defaultDuration(): string
+    {
+        return self::DURATION_OPTIONS[0]['value'];
+    }
+
+    public static function durationLabel(string $duration): string
+    {
+        foreach (self::DURATION_OPTIONS as $option) {
+            if ($option['value'] === $duration) {
+                return $option['label'];
+            }
+        }
+
+        throw new \InvalidArgumentException('Unsupported license duration.');
+    }
+
+    public static function expiryDateForDuration(string $duration, CarbonInterface $createdAt)
+    {
+        foreach (self::DURATION_OPTIONS as $option) {
+            if ($option['value'] === $duration) {
+                return $createdAt->copy()->addMonthsNoOverflow($option['months'])->startOfDay();
+            }
+        }
+
+        throw new \InvalidArgumentException('Unsupported license duration.');
     }
 
     public function isExpired(): bool

@@ -7,6 +7,8 @@
     export let csrfToken = '';
     export let flash = {};
     export let stats = {};
+    export let licenseDurations = [];
+    export let defaultLicenseDuration = '1_month';
     export let licenses = [];
     export let news = [];
     export let updates = [];
@@ -44,7 +46,7 @@
                 <div class="section-heading">
                     <div>
                         <h2>Create License Key</h2>
-                        <p class="card-subtitle">Generate a new 12-digit activator code by choosing an expiry date.</p>
+                        <p class="card-subtitle">Generate a new 12-digit activator code by choosing a license term.</p>
                     </div>
                     <a href="/admin/licenses/export" class="secondary-button">Export CSV</a>
                 </div>
@@ -53,10 +55,24 @@
                     <input type="hidden" name="_token" value={csrfToken} />
 
                     <div class="field">
-                        <label for="expires_at">Expiry date</label>
-                        <input id="expires_at" type="date" name="expires_at" required />
-                        {#if errors?.expires_at}
-                            <div class="field-error">{errors.expires_at}</div>
+                        <span>License term</span>
+                        <div class="duration-picker">
+                            {#each licenseDurations as option}
+                                <label class="duration-option">
+                                    <input
+                                        type="radio"
+                                        name="duration"
+                                        value={option.value}
+                                        checked={option.value === defaultLicenseDuration}
+                                        required
+                                    />
+                                    <span>{option.label}</span>
+                                </label>
+                            {/each}
+                        </div>
+                        <div class="field-help">Expiry is calculated automatically from the license creation date.</div>
+                        {#if errors?.duration}
+                            <div class="field-error">{errors.duration}</div>
                         {/if}
                     </div>
 

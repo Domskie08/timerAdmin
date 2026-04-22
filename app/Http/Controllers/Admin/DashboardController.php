@@ -31,6 +31,8 @@ class DashboardController extends Controller
                 'expiredLicenses' => $expiredLicenses,
                 'activeWindowMinutes' => config('timer.active_window_minutes'),
             ],
+            'licenseDurations' => License::durationOptions(),
+            'defaultLicenseDuration' => License::defaultDuration(),
             'licenses' => $licenses
                 ->map(fn (License $license): array => $license->toAdminArray())
                 ->values(),

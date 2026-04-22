@@ -12,15 +12,20 @@ class LicenseController extends Controller
 {
     public function store(StoreLicenseRequest $request): RedirectResponse
     {
-        $license = License::query()->create([
+        $createdAt = now();
+        $duration = $request->string('duration')->toString();
+
+        $license = new License([
             'code' => $this->generateUniqueCode(),
-            'expires_at' => $request->date('expires_at'),
+            'expires_at' => License::expiryDateForDuration($duration, $createdAt),
             'created_by' => $request->user()?->id,
         ]);
+        $license->created_at = $createdAt;
+        $license->save();
 
         return redirect()
             ->route('admin.dashboard')
-            ->with('success', "License {$license->code} created successfully.");
+            ->with('success', "License {$license->code} created successfully for ".License::durationLabel($duration).'.');
     }
 
     public function export(): StreamedResponse
