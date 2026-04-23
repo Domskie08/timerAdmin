@@ -13,13 +13,22 @@ class StoreAppUpdateRequest extends FormRequest
 
     public function rules(): array
     {
+        $maxUploadKb = (int) config('timer.update_upload_max_kb');
+
         return [
             'version' => ['required', 'string', 'max:50'],
             'title' => ['required', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:4000'],
-            'published_at' => ['nullable', 'date'],
-            'package' => ['required', 'file', 'mimes:zip,exe,msi', 'max:102400'],
+            'package' => ['required', 'file', 'mimes:zip,exe,msi', 'max:'.$maxUploadKb],
+        ];
+    }
+
+    public function messages(): array
+    {
+        $maxUploadMb = (int) ceil(config('timer.update_upload_max_kb') / 1024);
+
+        return [
+            'package.max' => "The update package may not be greater than {$maxUploadMb} MB.",
         ];
     }
 }
-

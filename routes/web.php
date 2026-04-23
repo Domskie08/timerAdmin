@@ -27,5 +27,5 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/licenses/export', [LicenseController::class, 'export'])->name('licenses.export');
     Route::post('/news', [NewsPostController::class, 'store'])->name('news.store');
     Route::post('/updates', [AppUpdateController::class, 'store'])->name('updates.store');
+    Route::delete('/updates/{appUpdate}', [AppUpdateController::class, 'destroy'])->name('updates.destroy');
 });
-

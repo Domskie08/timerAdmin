@@ -1,4 +1,5 @@
 <script>
+    import { onDestroy } from 'svelte';
     import AdminLayout from '@/layouts/AdminLayout.svelte';
     import StatCard from '@/components/StatCard.svelte';
     import TablePill from '@/components/TablePill.svelte';
@@ -14,6 +15,13 @@
     export let updates = [];
     export let errors = {};
 
+    let isUploadingUpdate = false;
+    let selectedUpdateFileName = '';
+    let selectedUpdateFileSizeLabel = '';
+    let deletingUpdateIds = [];
+    let uploadElapsedSeconds = 0;
+    let uploadTimerId = null;
+
     const formatDate = (value, withTime = false) => {
         if (!value) {
             return 'Not set';
@@ -26,6 +34,85 @@
             ...(withTime ? { hour: 'numeric', minute: '2-digit' } : {}),
         }).format(new Date(value));
     };
+
+    const formatFileSize = (bytes) => {
+        if (!Number.isFinite(bytes) || bytes <= 0) {
+            return '';
+        }
+
+        const megabytes = bytes / (1024 * 1024);
+        return `${megabytes.toFixed(megabytes >= 100 ? 0 : 1)} MB`;
+    };
+
+    const formatElapsedTime = (seconds) => {
+        const normalizedSeconds = Math.max(0, Math.floor(seconds));
+        const hours = Math.floor(normalizedSeconds / 3600);
+        const minutes = Math.floor((normalizedSeconds % 3600) / 60);
+        const remainingSeconds = normalizedSeconds % 60;
+
+        if (hours > 0) {
+            return `${hours}:${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+        }
+
+        return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
+    };
+
+    const stopUploadTimer = () => {
+        if (uploadTimerId) {
+            window.clearInterval(uploadTimerId);
+            uploadTimerId = null;
+        }
+    };
+
+    const handleUpdatePackageChange = (event) => {
+        const file = event.currentTarget?.files?.[0];
+        selectedUpdateFileName = file?.name ?? '';
+        selectedUpdateFileSizeLabel = formatFileSize(file?.size ?? 0);
+    };
+
+    const handleUpdateSubmit = (event) => {
+        if (isUploadingUpdate) {
+            event.preventDefault();
+            return;
+        }
+
+        isUploadingUpdate = true;
+        uploadElapsedSeconds = 0;
+        stopUploadTimer();
+        const startedAtMs = Date.now();
+        uploadTimerId = window.setInterval(() => {
+            uploadElapsedSeconds = Math.floor((Date.now() - startedAtMs) / 1000);
+        }, 1000);
+
+        // Let Svelte render the uploading state before the browser starts the full form submit.
+        event.preventDefault();
+        const form = event.currentTarget;
+        requestAnimationFrame(() => form.submit());
+    };
+
+    const isDeletingUpdate = (updateId) => deletingUpdateIds.includes(updateId);
+
+    const handleUpdateDeleteSubmit = (event, update) => {
+        if (isDeletingUpdate(update.id)) {
+            event.preventDefault();
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Delete "${update.title}" (${update.version})? This removes the uploaded file from the admin portal.`
+        );
+
+        if (!confirmed) {
+            event.preventDefault();
+            return;
+        }
+
+        deletingUpdateIds = [...deletingUpdateIds, update.id];
+    };
+
+    onDestroy(() => {
+        stopUploadTimer();
+    });
 </script>
 
 <svelte:head>
@@ -143,7 +230,7 @@
                     </div>
                 </div>
 
-                <form method="POST" action="/admin/updates" enctype="multipart/form-data">
+                <form method="POST" action="/admin/updates" enctype="multipart/form-data" on:submit={handleUpdateSubmit}>
                     <input type="hidden" name="_token" value={csrfToken} />
 
                     <div class="field">
@@ -162,19 +249,42 @@
                     </div>
 
                     <div class="field">
-                        <label for="published_at">Publish at</label>
-                        <input id="published_at" type="datetime-local" name="published_at" />
-                    </div>
-
-                    <div class="field">
                         <label for="package">Release file</label>
-                        <input id="package" type="file" name="package" accept=".zip,.exe,.msi" required />
+                        <input
+                            id="package"
+                            type="file"
+                            name="package"
+                            accept=".zip,.exe,.msi"
+                            required
+                            on:change={handleUpdatePackageChange}
+                        />
+                        <div class="field-help">
+                            Large local `.exe` uploads can take several minutes. Keep this page open until you are redirected back to the dashboard.
+                        </div>
+                        <div class="field-help">
+                            Publish time is set automatically from the current Philippine time when the upload is completed.
+                        </div>
+                        {#if selectedUpdateFileName}
+                            <div class="field-help">
+                                Selected: {selectedUpdateFileName}{selectedUpdateFileSizeLabel ? ` (${selectedUpdateFileSizeLabel})` : ''}
+                            </div>
+                        {/if}
+                        {#if isUploadingUpdate}
+                            <div class="field-help">
+                                Uploading update package now. This may take a while on `php artisan serve`.
+                            </div>
+                            <div class="field-help">
+                                Elapsed upload time: <span class="mono">{formatElapsedTime(uploadElapsedSeconds)}</span>
+                            </div>
+                        {/if}
                         {#if errors?.package}
                             <div class="field-error">{errors.package}</div>
                         {/if}
                     </div>
 
-                    <button type="submit" class="primary-button">Upload Update</button>
+                    <button type="submit" class="primary-button" disabled={isUploadingUpdate}>
+                        {isUploadingUpdate ? `Uploading Update... ${formatElapsedTime(uploadElapsedSeconds)}` : 'Upload Update'}
+                    </button>
                 </form>
             </article>
 
@@ -247,15 +357,35 @@
 
             {#if updates.length}
                 <div class="list-rail">
-                    {#each updates.slice(0, 5) as update}
+                    {#each updates as update}
                         <div class="list-item">
                             <header>
-                                <strong>{update.title}</strong>
-                                {#if update.isActive}
-                                    <span class="pill-tag">Current Live Release</span>
-                                {/if}
+                                <div>
+                                    <strong>{update.title}</strong>
+                                    <div class="tag-row">
+                                        {#if update.isActive}
+                                            <span class="pill-tag">Current Live Release</span>
+                                        {/if}
+                                        <span class="pill-tag">Version {update.version}</span>
+                                    </div>
+                                </div>
+                                <form
+                                    method="POST"
+                                    action={`/admin/updates/${update.id}`}
+                                    class="inline-action-form"
+                                    on:submit={(event) => handleUpdateDeleteSubmit(event, update)}
+                                >
+                                    <input type="hidden" name="_token" value={csrfToken} />
+                                    <input type="hidden" name="_method" value="DELETE" />
+                                    <button type="submit" class="danger-button" disabled={isDeletingUpdate(update.id)}>
+                                        {isDeletingUpdate(update.id) ? 'Deleting...' : 'Delete'}
+                                    </button>
+                                </form>
                             </header>
-                            <div class="support-copy">Version {update.version} - {update.fileName}</div>
+                            <div class="support-copy">{update.fileName}</div>
+                            {#if update.description}
+                                <div class="support-copy">{update.description}</div>
+                            {/if}
                             <div class="support-copy">{formatDate(update.publishedAt, true)}</div>
                         </div>
                     {/each}
