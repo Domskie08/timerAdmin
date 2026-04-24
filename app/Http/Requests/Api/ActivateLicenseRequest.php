@@ -2,18 +2,16 @@
 
 namespace App\Http\Requests\Api;
 
+use App\Http\Requests\Api\Concerns\NormalizesLicenseDeviceInput;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ActivateLicenseRequest extends FormRequest
 {
+    use NormalizesLicenseDeviceInput;
+
     protected function prepareForValidation(): void
     {
-        $this->merge([
-            'license_key' => $this->input('license_key', $this->input('licenseKey')),
-            'pc_name' => $this->input('pc_name', $this->input('machineName')),
-            'app_version' => $this->input('app_version', $this->input('appVersion')),
-            'machine_id' => $this->input('machine_id', $this->input('machineId')),
-        ]);
+        $this->merge($this->normalizeLicenseDeviceInput());
     }
 
     public function authorize(): bool

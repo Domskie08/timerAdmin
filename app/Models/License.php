@@ -102,13 +102,17 @@ class License extends Model
 
     public function toAdminArray(): array
     {
+        $deviceName = $this->pc_name ?: 'Available';
+
         return [
             'id' => $this->id,
             'licenseKey' => $this->code,
             'creationDate' => $this->created_at?->toIso8601String(),
             'expiryDate' => $this->expires_at?->toDateString(),
-            'pcName' => $this->pc_name ?: 'Available',
+            'pcName' => $deviceName,
             'machineId' => $this->machine_id,
+            'deviceId' => $this->machine_id,
+            'deviceName' => $deviceName,
             'status' => $this->status()->value,
             'lastSeenAt' => $this->last_seen_at?->toIso8601String(),
             'activatedAt' => $this->activated_at?->toIso8601String(),
@@ -126,6 +130,10 @@ class License extends Model
             'pcName' => $this->pc_name,
             'machine_id' => $this->machine_id,
             'machineId' => $this->machine_id,
+            'device_name' => $this->pc_name,
+            'deviceName' => $this->pc_name,
+            'device_id' => $this->machine_id,
+            'deviceId' => $this->machine_id,
             'expires_at' => $this->expires_at?->toDateString(),
             'expiresAt' => $this->expires_at?->toDateString(),
             'status' => strtolower($this->status()->value),

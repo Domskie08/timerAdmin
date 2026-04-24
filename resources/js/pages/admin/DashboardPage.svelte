@@ -122,7 +122,7 @@
 <AdminLayout {flash} {csrfToken} {appName}>
     <section class="stats-grid">
         <StatCard label="Total Licenses" value={stats.totalLicenses ?? 0} hint="Every generated activation key." accent="aqua" />
-        <StatCard label="Available" value={stats.availableLicenses ?? 0} hint="Unused licenses waiting for a PC." accent="orange" />
+        <StatCard label="Available" value={stats.availableLicenses ?? 0} hint="Unused licenses waiting for a device." accent="orange" />
         <StatCard label="Active Devices" value={stats.activeDevices ?? 0} hint={`Heartbeat inside ${stats.activeWindowMinutes ?? 10} minutes.`} accent="mint" />
         <StatCard label="Inactive or Expired" value={(stats.inactiveDevices ?? 0) + (stats.expiredLicenses ?? 0)} hint="Needs attention or renewal." accent="rose" />
     </section>
@@ -171,7 +171,7 @@
                 <div class="section-heading">
                     <div>
                         <h2>License Registry</h2>
-                        <p class="card-subtitle">License key, creation date, expiry date, PC name, and live status monitoring.</p>
+                        <p class="card-subtitle">License key, creation date, expiry date, device ID, and live status monitoring.</p>
                     </div>
                     <span class="chip">{licenses.length} listed</span>
                 </div>
@@ -183,7 +183,7 @@
                                 <th>License key</th>
                                 <th>Creation date</th>
                                 <th>Expiry date</th>
-                                <th>PC name</th>
+                                <th>Device ID</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
@@ -199,7 +199,16 @@
                                         </td>
                                         <td>{formatDate(license.creationDate, true)}</td>
                                         <td>{formatDate(license.expiryDate)}</td>
-                                        <td>{license.pcName}</td>
+                                        <td>
+                                            {#if license.deviceId}
+                                                <strong class="mono">{license.deviceId}</strong>
+                                                {#if license.deviceName && license.deviceName !== license.deviceId}
+                                                    <span class="muted">{license.deviceName}</span>
+                                                {/if}
+                                            {:else}
+                                                {license.deviceName ?? license.pcName}
+                                            {/if}
+                                        </td>
                                         <td>
                                             <TablePill status={license.status} />
                                             {#if license.lastSeenAt}
