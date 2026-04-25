@@ -11,7 +11,7 @@
             <div class="brand-mark">TA</div>
             <div>
                 <h1 class="brand-title">{appName}</h1>
-                <p class="brand-copy">Dark Fusion license command center for TimerApp.</p>
+                <p class="brand-copy">TimerApp license and update center.</p>
             </div>
         </Link>
 

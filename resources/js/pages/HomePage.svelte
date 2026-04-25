@@ -75,25 +75,7 @@
 
 <PublicLayout {auth} {appName}>
     <section class="hero-grid home-hero-grid">
-        <article class="hero-panel">
-            <p class="eyebrow">Dark Fusion Dashboard</p>
-            <h1 class="hero-title">Licenses, device health, and TimerApp updates in one admin console.</h1>
-            <p class="hero-copy">
-                Create unique 12-digit activator codes, monitor whether the linked device is active,
-                export license records, and publish public news updates from a single Laravel + Svelte workspace.
-            </p>
-
-            <div class="hero-actions">
-                {#if auth?.user?.is_admin}
-                    <Link href="/admin" class="primary-button">Open Dashboard</Link>
-                {:else}
-                    <Link href="/admin/login" class="primary-button">Admin Login</Link>
-                {/if}
-                <a href="#news" class="secondary-button">View News</a>
-            </div>
-        </article>
-
-        <aside class="panel dashboard-carousel-panel">
+        <aside class="panel dashboard-carousel-panel dashboard-showcase-panel">
             <div class="section-heading">
                 <h2 class="card-title">Dashboard</h2>
                 <span class="chip">{dashboardPhotos.length} photo{dashboardPhotos.length === 1 ? '' : 's'}</span>
@@ -105,6 +87,15 @@
                     {#if activePhoto.title}
                         <div class="carousel-caption">{activePhoto.title}</div>
                     {/if}
+                </div>
+
+                <div class="hero-actions showcase-actions">
+                    {#if auth?.user?.is_admin}
+                        <Link href="/admin" class="primary-button">Open Dashboard</Link>
+                    {:else}
+                        <Link href="/admin/login" class="primary-button">Admin Login</Link>
+                    {/if}
+                    <a href="#news" class="secondary-button">View News</a>
                 </div>
 
                 {#if dashboardPhotos.length > 1}
