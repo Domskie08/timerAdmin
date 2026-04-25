@@ -149,7 +149,7 @@ class TimerAppController extends Controller
 
     public function download(AppUpdate $appUpdate): StreamedResponse
     {
-        abort_unless($appUpdate->is_active && $appUpdate->isPublished(), 404);
+        abort_unless($appUpdate->isPublished(), 404);
 
         return Storage::disk('public')->download($appUpdate->file_path, $appUpdate->file_name);
     }

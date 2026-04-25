@@ -13,12 +13,16 @@
     export let licenses = [];
     export let news = [];
     export let updates = [];
+    export let dashboardPhotos = [];
     export let errors = {};
 
     let isUploadingUpdate = false;
     let selectedUpdateFileName = '';
     let selectedUpdateFileSizeLabel = '';
+    let selectedDashboardPhotoName = '';
+    let selectedDashboardPhotoSizeLabel = '';
     let deletingUpdateIds = [];
+    let deletingDashboardPhotoIds = [];
     let uploadElapsedSeconds = 0;
     let uploadTimerId = null;
 
@@ -70,6 +74,12 @@
         selectedUpdateFileSizeLabel = formatFileSize(file?.size ?? 0);
     };
 
+    const handleDashboardPhotoChange = (event) => {
+        const file = event.currentTarget?.files?.[0];
+        selectedDashboardPhotoName = file?.name ?? '';
+        selectedDashboardPhotoSizeLabel = formatFileSize(file?.size ?? 0);
+    };
+
     const handleUpdateSubmit = (event) => {
         if (isUploadingUpdate) {
             event.preventDefault();
@@ -91,6 +101,7 @@
     };
 
     const isDeletingUpdate = (updateId) => deletingUpdateIds.includes(updateId);
+    const isDeletingDashboardPhoto = (photoId) => deletingDashboardPhotoIds.includes(photoId);
 
     const handleUpdateDeleteSubmit = (event, update) => {
         if (isDeletingUpdate(update.id)) {
@@ -108,6 +119,24 @@
         }
 
         deletingUpdateIds = [...deletingUpdateIds, update.id];
+    };
+
+    const handleDashboardPhotoDeleteSubmit = (event, photo) => {
+        if (isDeletingDashboardPhoto(photo.id)) {
+            event.preventDefault();
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Delete "${photo.title || photo.imageName}" from the public dashboard carousel?`
+        );
+
+        if (!confirmed) {
+            event.preventDefault();
+            return;
+        }
+
+        deletingDashboardPhotoIds = [...deletingDashboardPhotoIds, photo.id];
     };
 
     onDestroy(() => {
@@ -322,6 +351,114 @@
                     </label>
 
                     <button type="submit" class="secondary-button">Post News</button>
+                </form>
+            </article>
+
+            <article class="panel">
+                <div class="section-heading">
+                    <div>
+                        <h2>Dashboard Photos</h2>
+                        <p class="card-subtitle">Upload images for the public home dashboard carousel.</p>
+                    </div>
+                    <span class="chip">{dashboardPhotos.length} photo{dashboardPhotos.length === 1 ? '' : 's'}</span>
+                </div>
+
+                <form method="POST" action="/admin/dashboard-photos" enctype="multipart/form-data">
+                    <input type="hidden" name="_token" value={csrfToken} />
+
+                    <div class="field">
+                        <label for="photo_title">Photo title</label>
+                        <input id="photo_title" type="text" name="photo_title" placeholder="Dashboard overview" />
+                        {#if errors?.photo_title}
+                            <div class="field-error">{errors.photo_title}</div>
+                        {/if}
+                    </div>
+
+                    <div class="field">
+                        <label for="photo">Photo</label>
+                        <input
+                            id="photo"
+                            type="file"
+                            name="photo"
+                            accept="image/png,image/jpeg,image/webp"
+                            required
+                            on:change={handleDashboardPhotoChange}
+                        />
+                        <div class="field-help">Use JPG, PNG, or WebP images up to 5 MB.</div>
+                        {#if selectedDashboardPhotoName}
+                            <div class="field-help">
+                                Selected: {selectedDashboardPhotoName}{selectedDashboardPhotoSizeLabel ? ` (${selectedDashboardPhotoSizeLabel})` : ''}
+                            </div>
+                        {/if}
+                        {#if errors?.photo}
+                            <div class="field-error">{errors.photo}</div>
+                        {/if}
+                    </div>
+
+                    <button type="submit" class="secondary-button">Add Photo</button>
+                </form>
+
+                {#if dashboardPhotos.length}
+                    <div class="photo-admin-list">
+                        {#each dashboardPhotos as photo}
+                            <div class="photo-admin-item">
+                                <img src={photo.imageUrl} alt={photo.title || photo.imageName} />
+                                <div>
+                                    <strong>{photo.title || photo.imageName}</strong>
+                                    <div class="support-copy">{photo.imageName}</div>
+                                </div>
+                                <form
+                                    method="POST"
+                                    action={`/admin/dashboard-photos/${photo.id}`}
+                                    class="inline-action-form"
+                                    on:submit={(event) => handleDashboardPhotoDeleteSubmit(event, photo)}
+                                >
+                                    <input type="hidden" name="_token" value={csrfToken} />
+                                    <input type="hidden" name="_method" value="DELETE" />
+                                    <button type="submit" class="danger-button" disabled={isDeletingDashboardPhoto(photo.id)}>
+                                        {isDeletingDashboardPhoto(photo.id) ? 'Deleting...' : 'Delete'}
+                                    </button>
+                                </form>
+                            </div>
+                        {/each}
+                    </div>
+                {/if}
+            </article>
+
+            <article class="panel">
+                <div class="section-heading">
+                    <div>
+                        <h2>Change Password</h2>
+                        <p class="card-subtitle">Update the password for the signed-in admin account.</p>
+                    </div>
+                </div>
+
+                <form method="POST" action="/admin/password">
+                    <input type="hidden" name="_token" value={csrfToken} />
+                    <input type="hidden" name="_method" value="PUT" />
+
+                    <div class="field">
+                        <label for="current_password">Current password</label>
+                        <input id="current_password" type="password" name="current_password" autocomplete="current-password" required />
+                        {#if errors?.current_password}
+                            <div class="field-error">{errors.current_password}</div>
+                        {/if}
+                    </div>
+
+                    <div class="field">
+                        <label for="password">New password</label>
+                        <input id="password" type="password" name="password" autocomplete="new-password" required />
+                        {#if errors?.password}
+                            <div class="field-error">{errors.password}</div>
+                        {/if}
+                    </div>
+
+                    <div class="field">
+                        <label for="password_confirmation">Confirm new password</label>
+                        <input id="password_confirmation" type="password" name="password_confirmation" autocomplete="new-password" required />
+                    </div>
+
+                    <button type="submit" class="secondary-button">Change Password</button>
                 </form>
             </article>
         </div>

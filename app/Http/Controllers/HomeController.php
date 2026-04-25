@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AppUpdate;
+use App\Models\DashboardPhoto;
 use App\Models\NewsPost;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -28,6 +29,13 @@ class HomeController extends Controller
         return Inertia::render('HomePage', [
             'news' => $news,
             'latestUpdate' => $latestUpdate?->toPublicArray(),
+            'dashboardPhotos' => DashboardPhoto::query()
+                ->visible()
+                ->orderBy('position')
+                ->latest()
+                ->get()
+                ->map(fn (DashboardPhoto $photo): array => $photo->toPublicArray())
+                ->values(),
         ]);
     }
 }

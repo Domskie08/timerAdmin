@@ -17,6 +17,7 @@
 
         <nav class="site-nav">
             <Link href="/" class="ghost-button">Home</Link>
+            <Link href="/support" class="ghost-button">Support</Link>
             {#if auth?.user?.is_admin}
                 <Link href="/admin" class="primary-button">Open Admin</Link>
             {:else}

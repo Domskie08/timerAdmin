@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AppUpdate;
+use App\Models\DashboardPhoto;
 use App\Models\License;
 use App\Models\NewsPost;
 use Inertia\Inertia;
@@ -47,6 +48,13 @@ class DashboardController extends Controller
                 ->latest('published_at')
                 ->get()
                 ->map(fn (AppUpdate $update): array => $update->toAdminArray())
+                ->values(),
+            'dashboardPhotos' => DashboardPhoto::query()
+                ->with('uploader:id,name')
+                ->orderBy('position')
+                ->latest()
+                ->get()
+                ->map(fn (DashboardPhoto $photo): array => $photo->toAdminArray())
                 ->values(),
         ]);
     }

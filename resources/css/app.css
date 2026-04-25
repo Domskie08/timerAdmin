@@ -186,7 +186,8 @@ img {
 .dashboard-grid,
 .split-grid,
 .stats-grid,
-.form-grid {
+.form-grid,
+.home-summary-grid {
     display: grid;
     gap: 18px;
 }
@@ -194,6 +195,16 @@ img {
 .hero-grid {
     grid-template-columns: 1.35fr 0.95fr;
     margin-bottom: 24px;
+}
+
+.home-hero-grid {
+    grid-template-columns: 0.9fr 1.15fr;
+    align-items: stretch;
+}
+
+.home-summary-grid {
+    grid-template-columns: 0.78fr 1.22fr;
+    margin-top: 24px;
 }
 
 .dashboard-grid {
@@ -278,6 +289,104 @@ img {
     flex-wrap: wrap;
     gap: 12px;
     margin-top: 22px;
+}
+
+.dashboard-carousel-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 480px;
+}
+
+.carousel-frame {
+    position: relative;
+    flex: 1;
+    min-height: 380px;
+    overflow: hidden;
+    border-radius: 22px;
+    border: 1px solid rgba(135, 170, 214, 0.14);
+    background: rgba(5, 13, 24, 0.9);
+}
+
+.carousel-frame img {
+    width: 100%;
+    height: 100%;
+    min-height: 380px;
+    display: block;
+    object-fit: cover;
+}
+
+.carousel-caption {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(135, 170, 214, 0.18);
+    background: rgba(5, 13, 24, 0.78);
+    color: var(--text);
+    font-weight: 700;
+}
+
+.carousel-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.carousel-button {
+    width: 44px;
+    padding: 0;
+    font-weight: 800;
+}
+
+.carousel-dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.carousel-dots button {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: rgba(147, 168, 194, 0.45);
+    border: 1px solid rgba(147, 168, 194, 0.38);
+    padding: 0;
+}
+
+.carousel-dots button.active {
+    width: 26px;
+    background: var(--accent);
+    border-color: rgba(56, 214, 255, 0.75);
+}
+
+.carousel-empty {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    min-height: 360px;
+}
+
+.compact-update-panel {
+    align-self: start;
+}
+
+.compact-update {
+    padding: 14px;
+}
+
+.compact-update .section-copy {
+    margin: 8px 0;
+}
+
+.compact-action {
+    min-height: 38px;
+    padding: 0 14px;
 }
 
 .hero-metrics {
@@ -591,6 +700,62 @@ td strong {
     background: rgba(7, 14, 26, 0.58);
 }
 
+.support-hero {
+    margin-bottom: 20px;
+}
+
+.support-title {
+    margin: 0 0 10px;
+    font-size: clamp(1.8rem, 3vw, 2.6rem);
+}
+
+.support-version-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(135, 170, 214, 0.12);
+    background: rgba(7, 14, 26, 0.58);
+}
+
+.version-heading {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.version-heading h3 {
+    margin: 0;
+}
+
+.photo-admin-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.photo-admin-item {
+    display: grid;
+    grid-template-columns: 74px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 18px;
+    border: 1px solid rgba(135, 170, 214, 0.12);
+    background: rgba(7, 14, 26, 0.58);
+}
+
+.photo-admin-item img {
+    width: 74px;
+    height: 54px;
+    object-fit: cover;
+    border-radius: 12px;
+    border: 1px solid rgba(135, 170, 214, 0.14);
+}
+
 .news-card header,
 .list-item header {
     display: flex;
@@ -665,7 +830,9 @@ td strong {
     .dashboard-grid,
     .split-grid,
     .stats-grid,
-    .form-grid {
+    .form-grid,
+    .home-summary-grid,
+    .home-hero-grid {
         grid-template-columns: 1fr;
     }
 
@@ -677,6 +844,21 @@ td strong {
 
     .hero-metrics {
         grid-template-columns: 1fr;
+    }
+
+    .dashboard-carousel-panel {
+        min-height: auto;
+    }
+
+    .support-version-card,
+    .photo-admin-item {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+
+    .support-version-card {
+        flex-direction: column;
+        align-items: stretch;
     }
 }
 
