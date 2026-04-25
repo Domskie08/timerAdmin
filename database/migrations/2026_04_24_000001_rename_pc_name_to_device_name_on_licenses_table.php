@@ -8,15 +8,23 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (! Schema::hasColumn('licenses', 'pc_name') || Schema::hasColumn('licenses', 'device_name')) {
+            return;
+        }
+
         Schema::table('licenses', function (Blueprint $table): void {
-            $table->string('machine_id')->nullable()->after('device_name')->index();
+            $table->renameColumn('pc_name', 'device_name');
         });
     }
 
     public function down(): void
     {
+        if (! Schema::hasColumn('licenses', 'device_name') || Schema::hasColumn('licenses', 'pc_name')) {
+            return;
+        }
+
         Schema::table('licenses', function (Blueprint $table): void {
-            $table->dropColumn('machine_id');
+            $table->renameColumn('device_name', 'pc_name');
         });
     }
 };

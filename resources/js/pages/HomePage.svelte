@@ -51,7 +51,7 @@
                 </div>
                 <div class="metric">
                     <strong>CSV Export</strong>
-                    <span>Creation date, expiry date, PC name, and status are export-ready.</span>
+                    <span>Creation date, expiry date, device name, and status are export-ready.</span>
                 </div>
                 <div class="metric">
                     <strong>Live Update Feed</strong>

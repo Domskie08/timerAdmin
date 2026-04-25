@@ -23,20 +23,20 @@ class TimerAppController extends Controller
             return $this->errorResponse($license, 'License has expired.', 422, 'expired');
         }
 
-        $pcName = $request->string('pc_name')->toString();
+        $deviceName = $request->string('device_name')->toString();
         $machineId = $request->string('machine_id')->toString();
 
-        if ($this->licenseAssignedToAnotherMachine($license, $pcName, $machineId)) {
+        if ($this->licenseAssignedToAnotherDevice($license, $deviceName, $machineId)) {
             return response()->json([
                 'success' => false,
                 'status' => 'in_use',
-                'message' => 'License is already assigned to another PC.',
+                'message' => 'License is already assigned to another device.',
                 'license' => $license->fresh()?->toApiArray(),
             ], 409);
         }
 
-        if (! $license->pc_name) {
-            $license->pc_name = $pcName;
+        if (! $license->device_name) {
+            $license->device_name = $deviceName;
             $license->machine_id = $machineId ?: $license->machine_id;
             $license->activated_at = now();
         }
@@ -54,10 +54,10 @@ class TimerAppController extends Controller
     {
         $license = $this->resolveLicense($request->string('license_key')->toString());
 
-        $pcName = $request->string('pc_name')->toString();
+        $deviceName = $request->string('device_name')->toString();
         $machineId = $request->string('machine_id')->toString();
 
-        if (! $this->licenseMatchesCurrentMachine($license, $pcName, $machineId)) {
+        if (! $this->licenseMatchesCurrentDevice($license, $deviceName, $machineId)) {
             return $this->errorResponse($license, 'This device is not linked to the supplied license.', 409, 'inactive');
         }
 
@@ -77,10 +77,10 @@ class TimerAppController extends Controller
     public function status(StatusLicenseRequest $request): JsonResponse
     {
         $license = $this->resolveLicense($request->string('license_key')->toString());
-        $pcName = $request->string('pc_name')->toString();
+        $deviceName = $request->string('device_name')->toString();
         $machineId = $request->string('machine_id')->toString();
 
-        if (! $this->licenseMatchesCurrentMachine($license, $pcName, $machineId)) {
+        if (! $this->licenseMatchesCurrentDevice($license, $deviceName, $machineId)) {
             return $this->errorResponse($license, 'This device is not linked to the supplied license.', 409, 'inactive');
         }
 
@@ -100,14 +100,14 @@ class TimerAppController extends Controller
     public function revoke(StatusLicenseRequest $request): JsonResponse
     {
         $license = $this->resolveLicense($request->string('license_key')->toString());
-        $pcName = $request->string('pc_name')->toString();
+        $deviceName = $request->string('device_name')->toString();
         $machineId = $request->string('machine_id')->toString();
 
-        if (! $this->licenseMatchesCurrentMachine($license, $pcName, $machineId)) {
+        if (! $this->licenseMatchesCurrentDevice($license, $deviceName, $machineId)) {
             return $this->errorResponse($license, 'This device is not linked to the supplied license.', 409, 'inactive');
         }
 
-        $license->pc_name = null;
+        $license->device_name = null;
         $license->machine_id = null;
         $license->activated_at = null;
         $license->last_seen_at = null;
@@ -118,7 +118,7 @@ class TimerAppController extends Controller
         return response()->json([
             'success' => true,
             'status' => 'available',
-            'message' => 'License revoked on this PC.',
+            'message' => 'License revoked on this device.',
             'license' => $license->fresh()?->toApiArray(),
         ]);
     }
@@ -161,9 +161,9 @@ class TimerAppController extends Controller
             ->firstOrFail();
     }
 
-    private function licenseAssignedToAnotherMachine(License $license, string $pcName, string $machineId): bool
+    private function licenseAssignedToAnotherDevice(License $license, string $deviceName, string $machineId): bool
     {
-        if (! $license->pc_name) {
+        if (! $license->device_name) {
             return false;
         }
 
@@ -171,12 +171,12 @@ class TimerAppController extends Controller
             return false;
         }
 
-        return strcasecmp($license->pc_name, $pcName) !== 0;
+        return strcasecmp($license->device_name, $deviceName) !== 0;
     }
 
-    private function licenseMatchesCurrentMachine(License $license, string $pcName, string $machineId): bool
+    private function licenseMatchesCurrentDevice(License $license, string $deviceName, string $machineId): bool
     {
-        if (! $license->pc_name) {
+        if (! $license->device_name) {
             return false;
         }
 
@@ -184,7 +184,7 @@ class TimerAppController extends Controller
             return hash_equals($license->machine_id, $machineId);
         }
 
-        return strcasecmp($license->pc_name, $pcName) === 0;
+        return strcasecmp($license->device_name, $deviceName) === 0;
     }
 
     private function successResponse(?License $license, string $message): JsonResponse

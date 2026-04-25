@@ -171,7 +171,7 @@
                 <div class="section-heading">
                     <div>
                         <h2>License Registry</h2>
-                        <p class="card-subtitle">License key, creation date, expiry date, device ID, and live status monitoring.</p>
+                        <p class="card-subtitle">License key, creation date, expiry date, device name, and live status monitoring.</p>
                     </div>
                     <span class="chip">{licenses.length} listed</span>
                 </div>
@@ -183,7 +183,7 @@
                                 <th>License key</th>
                                 <th>Creation date</th>
                                 <th>Expiry date</th>
-                                <th>Device ID</th>
+                                <th>Device Name</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
@@ -200,14 +200,7 @@
                                         <td>{formatDate(license.creationDate, true)}</td>
                                         <td>{formatDate(license.expiryDate)}</td>
                                         <td>
-                                            {#if license.deviceId}
-                                                <strong class="mono">{license.deviceId}</strong>
-                                                {#if license.deviceName && license.deviceName !== license.deviceId}
-                                                    <span class="muted">{license.deviceName}</span>
-                                                {/if}
-                                            {:else}
-                                                {license.deviceName ?? license.pcName}
-                                            {/if}
+                                            {license.deviceName}
                                         </td>
                                         <td>
                                             <TablePill status={license.status} />

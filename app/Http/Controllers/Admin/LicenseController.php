@@ -56,16 +56,18 @@ class LicenseController extends Controller
                 'License key',
                 'Creation date',
                 'Expiry date',
-                'PC name',
+                'Device Name',
                 'Status',
             ]);
 
             foreach ($licenses as $license) {
+                $deviceName = $license->device_name ?: 'Available';
+
                 fputcsv($handle, [
                     $license->code,
                     $license->created_at?->format('Y-m-d H:i:s'),
                     $license->expires_at?->format('Y-m-d'),
-                    $license->pc_name ?: 'Available',
+                    $deviceName,
                     $license->status()->value,
                 ]);
             }

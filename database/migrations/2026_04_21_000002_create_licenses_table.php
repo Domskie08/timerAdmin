@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('code', 12)->unique();
             $table->date('expires_at');
-            $table->string('pc_name')->nullable()->index();
+            $table->string('device_name')->nullable()->index();
             $table->timestamp('activated_at')->nullable();
             $table->timestamp('last_seen_at')->nullable()->index();
             $table->string('last_seen_ip', 45)->nullable();

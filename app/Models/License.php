@@ -19,7 +19,7 @@ class License extends Model
     protected $fillable = [
         'code',
         'expires_at',
-        'pc_name',
+        'device_name',
         'machine_id',
         'activated_at',
         'last_seen_at',
@@ -78,7 +78,7 @@ class License extends Model
 
     public function isCurrentlyActive(): bool
     {
-        return (bool) $this->pc_name
+        return (bool) $this->device_name
             && ! $this->isExpired()
             && $this->last_seen_at?->gte(now()->subMinutes(config('timer.active_window_minutes')));
     }
@@ -89,7 +89,7 @@ class License extends Model
             return LicenseStatus::Expired;
         }
 
-        if (! $this->pc_name) {
+        if (! $this->device_name) {
             return LicenseStatus::Available;
         }
 
@@ -102,14 +102,13 @@ class License extends Model
 
     public function toAdminArray(): array
     {
-        $deviceName = $this->pc_name ?: 'Available';
+        $deviceName = $this->device_name ?: 'Available';
 
         return [
             'id' => $this->id,
             'licenseKey' => $this->code,
             'creationDate' => $this->created_at?->toIso8601String(),
             'expiryDate' => $this->expires_at?->toDateString(),
-            'pcName' => $deviceName,
             'machineId' => $this->machine_id,
             'deviceId' => $this->machine_id,
             'deviceName' => $deviceName,
@@ -126,12 +125,10 @@ class License extends Model
             'id' => $this->id,
             'license_key' => $this->code,
             'licenseKey' => $this->code,
-            'pc_name' => $this->pc_name,
-            'pcName' => $this->pc_name,
             'machine_id' => $this->machine_id,
             'machineId' => $this->machine_id,
-            'device_name' => $this->pc_name,
-            'deviceName' => $this->pc_name,
+            'device_name' => $this->device_name,
+            'deviceName' => $this->device_name,
             'device_id' => $this->machine_id,
             'deviceId' => $this->machine_id,
             'expires_at' => $this->expires_at?->toDateString(),
