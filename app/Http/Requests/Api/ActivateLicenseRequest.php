@@ -24,7 +24,7 @@ class ActivateLicenseRequest extends FormRequest
         return [
             'license_key' => ['required', 'digits:12', 'exists:licenses,code'],
             'device_name' => ['required', 'string', 'max:255'],
-            'machine_id' => ['nullable', 'string', 'max:255'],
+            'machine_id' => ['required', 'string', 'max:255'],
             'app_version' => ['nullable', 'string', 'max:50'],
         ];
     }

@@ -130,7 +130,7 @@ License status is not stored as a plain column. It is calculated dynamically in 
 The status rules are:
 
 - `Expired`: the expiry date has passed
-- `Available`: the license has no assigned PC name
+- `Available`: the license has no assigned device name
 - `Active`: the license is assigned and `last_seen_at` is inside the active window
 - `Inactive`: the license is assigned but has not checked in recently
 
@@ -142,7 +142,7 @@ TIMER_ACTIVE_WINDOW_MINUTES=10
 
 The status logic uses:
 
-- `pc_name`
+- `device_name`
 - `machine_id`
 - `expires_at`
 - `last_seen_at`
@@ -241,9 +241,11 @@ Legacy compatibility routes also exist for:
 The API validators normalize both naming styles, so the client can send either:
 
 - `license_key` or `licenseKey`
-- `pc_name` or `machineName`
+- `device_name`, `deviceName`, `pc_name`, `pcName`, or `machineName`
 - `app_version` or `appVersion`
-- `machine_id` or `machineId`
+- `machine_id`, `machineId`, `device_id`, or `deviceId`
+
+`machine_id` is required for license activation, status checks, heartbeats, and revocation.
 
 ### Activate license
 
@@ -258,7 +260,7 @@ Expected payload:
 ```json
 {
   "license_key": "123456789012",
-  "pc_name": "OFFICE-PC-01",
+  "device_name": "OFFICE-PC-01",
   "machine_id": "machine-guid-123",
   "app_version": "1.0.0"
 }
@@ -270,13 +272,14 @@ How activation works:
 2. If the license is expired, activation is rejected.
 3. If the license is already assigned to another machine, activation is rejected with HTTP `409`.
 4. If the license is unused, the server binds it to the current PC and machine ID.
-5. The server updates `last_seen_at`, IP address, app version, and machine ID.
+5. The server updates `last_seen_at`, IP address, and app version.
 6. A success JSON payload is returned with the current license data.
 
 Machine binding behavior:
 
-- If `machine_id` is present and matches the stored machine ID, the request is treated as the same machine.
-- Otherwise the fallback comparison is the `pc_name`, case-insensitively.
+- The first successful activation stores the supplied `machine_id`.
+- After that, only the same `machine_id` can activate, check status, send heartbeat, or revoke the license.
+- A matching `device_name` alone is not enough to move or reuse a license.
 
 ### Check status
 
@@ -308,7 +311,6 @@ How it works:
   - `last_seen_at`
   - `last_seen_ip`
   - `app_version`
-  - `machine_id` if supplied
 
 This endpoint is what drives the dashboard's Active vs Inactive view.
 
@@ -324,7 +326,7 @@ How it works:
 
 - The current machine must match the bound device.
 - The backend clears:
-  - `pc_name`
+  - `device_name`
   - `machine_id`
   - `activated_at`
   - `last_seen_at`
@@ -404,7 +406,7 @@ Important fields:
 
 - `code`
 - `expires_at`
-- `pc_name`
+- `device_name`
 - `machine_id`
 - `activated_at`
 - `last_seen_at`

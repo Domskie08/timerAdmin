@@ -28,7 +28,11 @@ trait NormalizesLicenseDeviceInput
         foreach ($keys as $key) {
             $value = $this->input($key);
 
-            if (is_string($value) ? trim($value) !== '' : filled($value)) {
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+
+            if (! is_string($value) && filled($value)) {
                 return $value;
             }
         }
