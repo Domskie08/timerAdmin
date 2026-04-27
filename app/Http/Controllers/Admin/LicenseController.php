@@ -78,6 +78,16 @@ class LicenseController extends Controller
         ]);
     }
 
+    public function destroy(License $license): RedirectResponse
+    {
+        $code = $license->code;
+        $license->delete();
+
+        return redirect()
+            ->route('admin.dashboard')
+            ->with('success', "License {$code} deleted successfully.");
+    }
+
     private function generateUniqueCode(): string
     {
         do {

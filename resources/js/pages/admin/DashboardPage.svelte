@@ -21,6 +21,7 @@
     let selectedUpdateFileSizeLabel = '';
     let selectedDashboardPhotoName = '';
     let selectedDashboardPhotoSizeLabel = '';
+    let deletingLicenseIds = [];
     let deletingUpdateIds = [];
     let deletingDashboardPhotoIds = [];
     let uploadElapsedSeconds = 0;
@@ -100,8 +101,27 @@
         requestAnimationFrame(() => form.submit());
     };
 
+    const isDeletingLicense = (licenseId) => deletingLicenseIds.includes(licenseId);
     const isDeletingUpdate = (updateId) => deletingUpdateIds.includes(updateId);
     const isDeletingDashboardPhoto = (photoId) => deletingDashboardPhotoIds.includes(photoId);
+
+    const handleLicenseDeleteSubmit = (event, license) => {
+        if (isDeletingLicense(license.id)) {
+            event.preventDefault();
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Delete license ${license.licenseKey}? This permanently removes the key from the admin registry.`
+        );
+
+        if (!confirmed) {
+            event.preventDefault();
+            return;
+        }
+
+        deletingLicenseIds = [...deletingLicenseIds, license.id];
+    };
 
     const handleUpdateDeleteSubmit = (event, update) => {
         if (isDeletingUpdate(update.id)) {
@@ -214,6 +234,7 @@
                                 <th>Expiry date</th>
                                 <th>Device Name</th>
                                 <th>Status</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -237,11 +258,25 @@
                                                 <div class="muted">Last seen {formatDate(license.lastSeenAt, true)}</div>
                                             {/if}
                                         </td>
+                                        <td>
+                                            <form
+                                                method="POST"
+                                                action={`/admin/licenses/${license.id}`}
+                                                class="inline-action-form"
+                                                on:submit={(event) => handleLicenseDeleteSubmit(event, license)}
+                                            >
+                                                <input type="hidden" name="_token" value={csrfToken} />
+                                                <input type="hidden" name="_method" value="DELETE" />
+                                                <button type="submit" class="danger-button" disabled={isDeletingLicense(license.id)}>
+                                                    {isDeletingLicense(license.id) ? 'Deleting...' : 'Delete'}
+                                                </button>
+                                            </form>
+                                        </td>
                                     </tr>
                                 {/each}
                             {:else}
                                 <tr>
-                                    <td colspan="5">
+                                    <td colspan="6">
                                         <div class="empty-state">No licenses yet. Create the first one using the form above.</div>
                                     </td>
                                 </tr>

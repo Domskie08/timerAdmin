@@ -10,9 +10,6 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::post('/licenses/status', [TimerAppController::class, 'status'])
         ->name('licenses.status');
 
-    Route::post('/licenses/revoke', [TimerAppController::class, 'revoke'])
-        ->name('licenses.revoke');
-
     Route::post('/licenses/heartbeat', [TimerAppController::class, 'heartbeat'])
         ->name('licenses.heartbeat');
 
@@ -27,5 +24,4 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 Route::prefix('licenses')->group(function (): void {
     Route::post('/activate', [TimerAppController::class, 'activate']);
     Route::post('/status', [TimerAppController::class, 'status']);
-    Route::post('/revoke', [TimerAppController::class, 'revoke']);
 });

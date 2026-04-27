@@ -33,6 +33,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('/licenses', [LicenseController::class, 'store'])->name('licenses.store');
     Route::get('/licenses/export', [LicenseController::class, 'export'])->name('licenses.export');
+    Route::delete('/licenses/{license}', [LicenseController::class, 'destroy'])
+        ->whereNumber('license')
+        ->name('licenses.destroy');
     Route::post('/news', [NewsPostController::class, 'store'])->name('news.store');
     Route::post('/updates', [AppUpdateController::class, 'store'])->name('updates.store');
     Route::delete('/updates/{appUpdate}', [AppUpdateController::class, 'destroy'])->name('updates.destroy');

@@ -56,16 +56,25 @@ class TimerAppController extends Controller
 
     public function heartbeat(HeartbeatRequest $request): JsonResponse
     {
-        $license = $this->resolveLicense($request->string('license_key')->toString());
+        $deviceId = $request->string('machine_id')->toString();
+        $licenseKey = $request->string('license_key')->toString();
+        $license = $this->resolveLicenseByKeyOrDevice($licenseKey, $deviceId);
 
-        $machineId = $request->string('machine_id')->toString();
+        if (! $license) {
+            return response()->json([
+                'success' => false,
+                'status' => 'inactive',
+                'message' => 'Please buy license to activate some feature.',
+                'license' => null,
+            ], 404);
+        }
 
-        if (! $this->licenseMatchesCurrentDevice($license, $machineId)) {
+        if (! $this->licenseMatchesCurrentDevice($license, $deviceId)) {
             return $this->errorResponse($license, 'This device is not linked to the supplied license.', 409, 'inactive');
         }
 
         if ($license->isExpired()) {
-            return $this->errorResponse($license, 'License has expired.', 422, 'expired');
+            return $this->errorResponse($license, 'Please buy license to activate some feature.', 422, 'expired');
         }
 
         $license->last_seen_at = now();
@@ -78,15 +87,25 @@ class TimerAppController extends Controller
 
     public function status(StatusLicenseRequest $request): JsonResponse
     {
-        $license = $this->resolveLicense($request->string('license_key')->toString());
-        $machineId = $request->string('machine_id')->toString();
+        $deviceId = $request->string('machine_id')->toString();
+        $licenseKey = $request->string('license_key')->toString();
+        $license = $this->resolveLicenseByKeyOrDevice($licenseKey, $deviceId);
 
-        if (! $this->licenseMatchesCurrentDevice($license, $machineId)) {
+        if (! $license) {
+            return response()->json([
+                'success' => false,
+                'status' => 'inactive',
+                'message' => 'Please buy license to activate some feature.',
+                'license' => null,
+            ], 404);
+        }
+
+        if (! $this->licenseMatchesCurrentDevice($license, $deviceId)) {
             return $this->errorResponse($license, 'This device is not linked to the supplied license.', 409, 'inactive');
         }
 
         if ($license->isExpired()) {
-            return $this->errorResponse($license, 'License has expired.', 422, 'expired');
+            return $this->errorResponse($license, 'Please buy license to activate some feature.', 422, 'expired');
         }
 
         $license->last_seen_at = now();
@@ -95,32 +114,6 @@ class TimerAppController extends Controller
         $license->save();
 
         return $this->successResponse($license->fresh(), 'License is valid.');
-    }
-
-    public function revoke(StatusLicenseRequest $request): JsonResponse
-    {
-        $license = $this->resolveLicense($request->string('license_key')->toString());
-        $deviceName = $request->string('device_name')->toString();
-        $machineId = $request->string('machine_id')->toString();
-
-        if (! $this->licenseCanBeRevokedByDevice($license, $machineId, $deviceName)) {
-            return $this->errorResponse($license, 'This device is not linked to the supplied license.', 409, 'inactive');
-        }
-
-        $license->device_name = null;
-        $license->machine_id = null;
-        $license->activated_at = null;
-        $license->last_seen_at = null;
-        $license->last_seen_ip = null;
-        $license->app_version = null;
-        $license->save();
-
-        return response()->json([
-            'success' => true,
-            'status' => 'available',
-            'message' => 'License revoked on this device.',
-            'license' => $license->fresh()?->toApiArray(),
-        ]);
     }
 
     public function latestUpdate(Request $request): JsonResponse
@@ -161,6 +154,19 @@ class TimerAppController extends Controller
             ->firstOrFail();
     }
 
+    private function resolveLicenseByKeyOrDevice(?string $licenseKey, string $deviceId): ?License
+    {
+        if ($licenseKey) {
+            return License::query()
+                ->where('code', $licenseKey)
+                ->first();
+        }
+
+        return License::query()
+            ->where('machine_id', $deviceId)
+            ->first();
+    }
+
     private function resolveLicenseForUpdate(string $licenseKey): License
     {
         return License::query()
@@ -181,17 +187,6 @@ class TimerAppController extends Controller
     private function licenseMatchesCurrentDevice(License $license, string $machineId): bool
     {
         return (bool) $license->machine_id && hash_equals($license->machine_id, $machineId);
-    }
-
-    private function licenseCanBeRevokedByDevice(License $license, string $machineId, string $deviceName): bool
-    {
-        if ($this->licenseMatchesCurrentDevice($license, $machineId)) {
-            return true;
-        }
-
-        return ! $license->machine_id
-            && (bool) $license->device_name
-            && strcasecmp($license->device_name, $deviceName) === 0;
     }
 
     private function successResponse(?License $license, string $message): JsonResponse
