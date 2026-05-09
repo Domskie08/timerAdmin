@@ -27,6 +27,15 @@
     let uploadElapsedSeconds = 0;
     let uploadTimerId = null;
 
+    const toDateObject = (value) => {
+        if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+            const [year, month, day] = value.split('-').map(Number);
+            return new Date(year, month - 1, day, 12);
+        }
+
+        return new Date(value);
+    };
+
     const formatDate = (value, withTime = false) => {
         if (!value) {
             return 'Not set';
@@ -37,7 +46,7 @@
             month: 'short',
             day: 'numeric',
             ...(withTime ? { hour: 'numeric', minute: '2-digit' } : {}),
-        }).format(new Date(value));
+        }).format(toDateObject(value));
     };
 
     const formatFileSize = (bytes) => {
@@ -171,9 +180,9 @@
 <AdminLayout {flash} {csrfToken} {appName}>
     <section class="stats-grid">
         <StatCard label="Total Licenses" value={stats.totalLicenses ?? 0} hint="Every generated activation key." accent="aqua" />
-        <StatCard label="Available" value={stats.availableLicenses ?? 0} hint="Unused licenses waiting for a device." accent="orange" />
-        <StatCard label="Active Devices" value={stats.activeDevices ?? 0} hint={`Heartbeat inside ${stats.activeWindowMinutes ?? 10} minutes.`} accent="mint" />
-        <StatCard label="Inactive or Expired" value={(stats.inactiveDevices ?? 0) + (stats.expiredLicenses ?? 0)} hint="Needs attention or renewal." accent="rose" />
+        <StatCard label="Frozen" value={stats.frozenLicenses ?? 0} hint="Expiry has not started yet." accent="orange" />
+        <StatCard label="Provisioned" value={stats.provisionedLicenses ?? 0} hint="Device ID already linked in the registry." accent="mint" />
+        <StatCard label="Active Devices" value={stats.activeDevices ?? 0} hint={`Heartbeat inside ${stats.activeWindowMinutes ?? 10} minutes. ${stats.expiredLicenses ?? 0} expired license${(stats.expiredLicenses ?? 0) === 1 ? '' : 's'} in the system.`} accent="rose" />
     </section>
 
     <section class="dashboard-grid">
@@ -182,7 +191,7 @@
                 <div class="section-heading">
                     <div>
                         <h2>Create License Key</h2>
-                        <p class="card-subtitle">Generate a new 12-digit activator code by choosing a license term.</p>
+                        <p class="card-subtitle">Generate a new 12-digit license code and keep it frozen until an admin activates a device from Settings.</p>
                     </div>
                     <a href="/admin/licenses/export" class="secondary-button">Export CSV</a>
                 </div>
@@ -206,7 +215,8 @@
                                 </label>
                             {/each}
                         </div>
-                        <div class="field-help">Expiry is calculated automatically from the license creation date.</div>
+                        <div class="field-help">The selected term is reserved now, but the real expiry date only starts when Settings > License Activation runs successfully in TimerApp.</div>
+                        <div class="field-help">Status checks, COM detection, heartbeats, and app startup do not consume license time.</div>
                         {#if errors?.duration}
                             <div class="field-error">{errors.duration}</div>
                         {/if}
@@ -220,7 +230,7 @@
                 <div class="section-heading">
                     <div>
                         <h2>License Registry</h2>
-                        <p class="card-subtitle">License key, creation date, expiry date, device name, and live status monitoring.</p>
+                        <p class="card-subtitle">Track frozen vs active licenses, provisioned devices, and the real expiry date that begins only after activation.</p>
                     </div>
                     <span class="chip">{licenses.length} listed</span>
                 </div>
@@ -230,10 +240,11 @@
                         <thead>
                             <tr>
                                 <th>License key</th>
-                                <th>Creation date</th>
+                                <th>Term</th>
                                 <th>Expiry date</th>
-                                <th>Device Name</th>
-                                <th>Status</th>
+                                <th>Device</th>
+                                <th>Provision status</th>
+                                <th>License status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -247,15 +258,27 @@
                                                 <span class="muted">App v{license.appVersion}</span>
                                             {/if}
                                         </td>
-                                        <td>{formatDate(license.creationDate, true)}</td>
-                                        <td>{formatDate(license.expiryDate)}</td>
                                         <td>
-                                            {license.deviceName}
+                                            <strong>{license.durationLabel}</strong>
+                                            <span class="muted">Created {formatDate(license.creationDate, true)}</span>
+                                        </td>
+                                        <td>{license.expiryDate ? formatDate(license.expiryDate) : 'Starts after activation'}</td>
+                                        <td>
+                                            <strong class="mono">{license.deviceId || 'Not linked yet'}</strong>
+                                            <span class="muted">{license.deviceName}</span>
                                         </td>
                                         <td>
-                                            <TablePill status={license.status} />
+                                            <TablePill status={license.provisionStatus} />
+                                        </td>
+                                        <td>
+                                            <TablePill status={license.licenseStatus} />
+                                            {#if license.activatedAt}
+                                                <div class="muted">Activated {formatDate(license.activatedAt, true)}</div>
+                                            {/if}
                                             {#if license.lastSeenAt}
                                                 <div class="muted">Last seen {formatDate(license.lastSeenAt, true)}</div>
+                                            {:else if !license.activatedAt}
+                                                <div class="muted">Waiting for Settings activation.</div>
                                             {/if}
                                         </td>
                                         <td>
@@ -276,7 +299,7 @@
                                 {/each}
                             {:else}
                                 <tr>
-                                    <td colspan="6">
+                                    <td colspan="7">
                                         <div class="empty-state">No licenses yet. Create the first one using the form above.</div>
                                     </td>
                                 </tr>

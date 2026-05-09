@@ -4,9 +4,8 @@ namespace App\Enums;
 
 enum LicenseStatus: string
 {
-    case Available = 'Available';
+    case Frozen = 'Frozen';
     case Active = 'Active';
-    case Inactive = 'Inactive';
     case Expired = 'Expired';
 }
 

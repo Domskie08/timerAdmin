@@ -21,6 +21,7 @@ class LicenseController extends Controller
         for ($attempt = 0; $attempt < self::MAX_CODE_GENERATION_ATTEMPTS; $attempt++) {
             $license = new License([
                 'code' => $this->generateUniqueCode(),
+                'duration' => $duration,
                 'expires_at' => License::expiryDateForDuration($duration, $createdAt),
                 'created_by' => $request->user()?->id,
             ]);
@@ -31,7 +32,7 @@ class LicenseController extends Controller
 
                 return redirect()
                     ->route('admin.dashboard')
-                    ->with('success', "License {$license->code} created successfully for ".License::durationLabel($duration).'.');
+                    ->with('success', "License {$license->code} created successfully for ".License::durationLabel($duration).'. Expiry will start when an admin activates the device.');
             } catch (QueryException $exception) {
                 if (! $this->isDuplicateCodeException($exception)) {
                     throw $exception;
@@ -55,19 +56,26 @@ class LicenseController extends Controller
             fputcsv($handle, [
                 'License key',
                 'Creation date',
+                'License term',
                 'Expiry date',
+                'Device ID',
                 'Device Name',
-                'Status',
+                'Provision Status',
+                'License Status',
             ]);
 
             foreach ($licenses as $license) {
-                $deviceName = $license->device_name ?: 'Available';
+                $deviceName = $license->device_name ?: 'Not linked yet';
+                $expiryDate = $license->effectiveExpiryDate()?->format('Y-m-d') ?? 'Starts after activation';
 
                 fputcsv($handle, [
                     $license->code,
                     $license->created_at?->format('Y-m-d H:i:s'),
-                    $license->expires_at?->format('Y-m-d'),
+                    License::durationLabel($license->resolvedDuration()),
+                    $expiryDate,
+                    $license->machine_id ?: 'Not linked yet',
                     $deviceName,
+                    $license->provisionStatus(),
                     $license->status()->value,
                 ]);
             }

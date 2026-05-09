@@ -1,7 +1,7 @@
 <script>
-    export let status = 'Available';
+    export let status = 'Frozen';
 
-    const className = `status-${status.toLowerCase()}`;
+    const className = `status-${status.toLowerCase().replace(/\s+/g, '-')}`;
 </script>
 
 <span class={`table-pill ${className}`}>{status}</span>

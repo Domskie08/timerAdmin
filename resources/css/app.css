@@ -678,7 +678,7 @@ td strong {
     font-weight: 600;
 }
 
-.table-pill.status-available {
+.table-pill.status-frozen {
     background: rgba(255, 209, 102, 0.12);
     color: var(--warning);
     border-color: rgba(255, 209, 102, 0.24);
@@ -690,7 +690,13 @@ td strong {
     border-color: rgba(118, 247, 208, 0.24);
 }
 
-.table-pill.status-inactive {
+.table-pill.status-provisioned {
+    background: rgba(56, 214, 255, 0.12);
+    color: var(--accent);
+    border-color: rgba(56, 214, 255, 0.24);
+}
+
+.table-pill.status-not-provisioned {
     background: rgba(147, 168, 194, 0.12);
     color: #d0deef;
     border-color: rgba(147, 168, 194, 0.2);

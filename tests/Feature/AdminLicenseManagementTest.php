@@ -11,6 +11,30 @@ class AdminLicenseManagementTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_admin_can_create_a_frozen_license_from_dashboard(): void
+    {
+        $admin = User::query()->create([
+            'name' => 'Admin User',
+            'email' => 'admin@example.com',
+            'password' => 'secret-password',
+            'is_admin' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->post('/admin/licenses', [
+                'duration' => '3_months',
+            ])
+            ->assertRedirect(route('admin.dashboard'))
+            ->assertSessionHas('success');
+
+        $license = License::query()->latest('id')->first();
+
+        $this->assertNotNull($license);
+        $this->assertSame('3_months', $license->duration);
+        $this->assertNull($license->activated_at);
+        $this->assertSame('Frozen', $license->status()->value);
+    }
+
     public function test_admin_can_delete_license_from_dashboard(): void
     {
         $admin = User::query()->create([
@@ -22,6 +46,7 @@ class AdminLicenseManagementTest extends TestCase
 
         $license = License::query()->create([
             'code' => '123456789012',
+            'duration' => '1_month',
             'expires_at' => now()->addMonth()->toDateString(),
         ]);
 

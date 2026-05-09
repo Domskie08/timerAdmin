@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\License;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class LicenseDeviceBindingTest extends TestCase
@@ -37,6 +38,33 @@ class LicenseDeviceBindingTest extends TestCase
             'device_name' => 'OFFICE-PC-01',
             'machine_id' => 'machine-original',
         ]);
+    }
+
+    public function test_activation_starts_expiry_from_the_activation_time(): void
+    {
+        Carbon::setTestNow('2026-01-10 08:00:00');
+        $license = $this->createLicense();
+
+        Carbon::setTestNow('2026-03-15 09:30:00');
+
+        try {
+            $this->postJson('/api/v1/licenses/activate', [
+                'license_key' => $license->code,
+                'device_name' => 'OFFICE-PC-01',
+                'machine_id' => 'machine-original',
+            ])
+                ->assertOk()
+                ->assertJsonPath('success', true)
+                ->assertJsonPath('status', 'active')
+                ->assertJsonPath('license.expires_at', '2026-04-15');
+
+            $activatedLicense = $license->fresh();
+
+            $this->assertSame('2026-03-15 09:30:00', $activatedLicense->activated_at?->format('Y-m-d H:i:s'));
+            $this->assertSame('2026-04-15', $activatedLicense->expires_at?->toDateString());
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     public function test_status_rejects_same_device_name_with_different_machine_id(): void
@@ -85,6 +113,28 @@ class LicenseDeviceBindingTest extends TestCase
         $this->assertNotNull($license->fresh()->last_seen_at);
     }
 
+    public function test_status_returns_frozen_for_unactivated_license_without_starting_expiry(): void
+    {
+        $license = $this->createLicense();
+
+        $this->postJson('/api/v1/licenses/status', [
+            'license_key' => $license->code,
+            'machine_id' => 'machine-original',
+            'device_name' => 'OFFICE-PC-01',
+        ])
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('status', 'frozen')
+            ->assertJsonPath('message', 'License is frozen until activated from Settings.')
+            ->assertJsonPath('license.provision_status', 'not_provisioned')
+            ->assertJsonPath('license.expires_at', null);
+
+        $freshLicense = $license->fresh();
+
+        $this->assertNull($freshLicense->activated_at);
+        $this->assertNull($freshLicense->last_seen_at);
+    }
+
     public function test_heartbeat_can_resolve_license_by_machine_id_without_license_key(): void
     {
         $license = $this->createLicense([
@@ -104,6 +154,30 @@ class LicenseDeviceBindingTest extends TestCase
             ->assertJsonPath('license.machine_id', 'machine-original');
 
         $this->assertNotNull($license->fresh()->last_seen_at);
+    }
+
+    public function test_heartbeat_keeps_pre_provisioned_license_frozen_until_activation(): void
+    {
+        $license = $this->createLicense([
+            'device_name' => 'OFFICE-PC-01',
+            'machine_id' => 'machine-original',
+        ]);
+
+        $this->postJson('/api/v1/licenses/heartbeat', [
+            'machineId' => 'machine-original',
+            'deviceName' => 'OFFICE-PC-01',
+        ])
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('status', 'frozen')
+            ->assertJsonPath('message', 'License is frozen until activated from Settings.')
+            ->assertJsonPath('license.provision_status', 'provisioned')
+            ->assertJsonPath('license.expires_at', null);
+
+        $freshLicense = $license->fresh();
+
+        $this->assertNull($freshLicense->activated_at);
+        $this->assertNull($freshLicense->last_seen_at);
     }
 
     public function test_status_without_matching_license_key_or_machine_id_returns_inactive(): void
@@ -155,6 +229,7 @@ class LicenseDeviceBindingTest extends TestCase
     {
         return License::query()->create([
             'code' => '123456789012',
+            'duration' => '1_month',
             'expires_at' => now()->addMonth()->toDateString(),
             ...$attributes,
         ]);

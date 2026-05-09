@@ -18,17 +18,17 @@ class DashboardController extends Controller
             ->latest()
             ->get();
 
-        $availableLicenses = $licenses->filter(fn (License $license): bool => $license->status()->value === 'Available')->count();
-        $activeDevices = $licenses->filter(fn (License $license): bool => $license->status()->value === 'Active')->count();
-        $inactiveDevices = $licenses->filter(fn (License $license): bool => $license->status()->value === 'Inactive')->count();
-        $expiredLicenses = $licenses->filter(fn (License $license): bool => $license->status()->value === 'Expired')->count();
+        $frozenLicenses = $licenses->filter(fn (License $license): bool => $license->isFrozen())->count();
+        $provisionedLicenses = $licenses->filter(fn (License $license): bool => $license->isProvisioned())->count();
+        $activeDevices = $licenses->filter(fn (License $license): bool => $license->isCurrentlyActive())->count();
+        $expiredLicenses = $licenses->filter(fn (License $license): bool => $license->isExpired())->count();
 
         return Inertia::render('admin/DashboardPage', [
             'stats' => [
                 'totalLicenses' => $licenses->count(),
-                'availableLicenses' => $availableLicenses,
+                'frozenLicenses' => $frozenLicenses,
+                'provisionedLicenses' => $provisionedLicenses,
                 'activeDevices' => $activeDevices,
-                'inactiveDevices' => $inactiveDevices,
                 'expiredLicenses' => $expiredLicenses,
                 'activeWindowMinutes' => config('timer.active_window_minutes'),
             ],
