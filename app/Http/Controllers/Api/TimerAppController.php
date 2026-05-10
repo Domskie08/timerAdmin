@@ -26,9 +26,10 @@ class TimerAppController extends Controller
             }
 
             $deviceName = $request->string('device_name')->toString();
+            $deviceId = $request->string('device_id')->toString();
             $machineId = $request->string('machine_id')->toString();
 
-            if ($this->licenseAssignedToAnotherDevice($license, $machineId, $deviceName)) {
+            if ($this->licenseAssignedToAnotherDevice($license, $deviceId, $deviceName)) {
                 return response()->json([
                     'success' => false,
                     'status' => 'in_use',
@@ -37,12 +38,10 @@ class TimerAppController extends Controller
                 ], 409);
             }
 
-            if (! $license->machine_id) {
-                $license->device_name = $deviceName;
-                $license->machine_id = $machineId;
-            } elseif (! $license->device_name) {
-                $license->device_name = $deviceName;
+            if (! $license->device_id) {
+                $license->device_id = $deviceId;
             }
+            $license->device_name = $deviceName;
 
             if (! $license->isActivated()) {
                 $license->activated_at = now();
@@ -57,18 +56,15 @@ class TimerAppController extends Controller
                 );
             }
 
-            $license->last_seen_at = now();
-            $license->last_seen_ip = $request->ip();
-            $license->app_version = $request->string('app_version')->toString() ?: $license->app_version;
-            $license->save();
+            $license = $this->syncObservedDeviceMetadata($license, $request, true);
 
-            return $this->successResponse($license->fresh(), 'License activated successfully.');
+            return $this->successResponse($license, 'License activated successfully.');
         });
     }
 
     public function heartbeat(HeartbeatRequest $request): JsonResponse
     {
-        $deviceId = $request->string('machine_id')->toString();
+        $deviceId = $request->string('device_id')->toString();
         $licenseKey = $request->string('license_key')->toString();
         $license = $this->resolveLicenseByKeyOrDevice($licenseKey, $deviceId);
 
@@ -90,6 +86,8 @@ class TimerAppController extends Controller
                 return $this->errorResponse($license, 'This device is not linked to the supplied license.', 409, 'inactive');
             }
 
+            $license = $this->syncObservedDeviceMetadata($license, $request, false);
+
             return $this->successResponse($license, 'License is frozen until activated from Settings.');
         }
 
@@ -101,17 +99,14 @@ class TimerAppController extends Controller
             return $this->errorResponse($license, 'Please buy license to activate some feature.', 422, 'expired');
         }
 
-        $license->last_seen_at = now();
-        $license->last_seen_ip = $request->ip();
-        $license->app_version = $request->string('app_version')->toString() ?: $license->app_version;
-        $license->save();
+        $license = $this->syncObservedDeviceMetadata($license, $request, true);
 
-        return $this->successResponse($license->fresh(), 'Heartbeat received.');
+        return $this->successResponse($license, 'Heartbeat received.');
     }
 
     public function status(StatusLicenseRequest $request): JsonResponse
     {
-        $deviceId = $request->string('machine_id')->toString();
+        $deviceId = $request->string('device_id')->toString();
         $licenseKey = $request->string('license_key')->toString();
         $license = $this->resolveLicenseByKeyOrDevice($licenseKey, $deviceId);
 
@@ -133,6 +128,8 @@ class TimerAppController extends Controller
                 return $this->errorResponse($license, 'This device is not linked to the supplied license.', 409, 'inactive');
             }
 
+            $license = $this->syncObservedDeviceMetadata($license, $request, false);
+
             return $this->successResponse($license, 'License is frozen until activated from Settings.');
         }
 
@@ -144,12 +141,9 @@ class TimerAppController extends Controller
             return $this->errorResponse($license, 'Please buy license to activate some feature.', 422, 'expired');
         }
 
-        $license->last_seen_at = now();
-        $license->last_seen_ip = $request->ip();
-        $license->app_version = $request->string('app_version')->toString() ?: $license->app_version;
-        $license->save();
+        $license = $this->syncObservedDeviceMetadata($license, $request, true);
 
-        return $this->successResponse($license->fresh(), 'License is valid.');
+        return $this->successResponse($license, 'License is valid.');
     }
 
     public function latestUpdate(Request $request): JsonResponse
@@ -199,7 +193,7 @@ class TimerAppController extends Controller
         }
 
         return License::query()
-            ->where('machine_id', $deviceId)
+            ->where('device_id', $deviceId)
             ->first();
     }
 
@@ -211,10 +205,10 @@ class TimerAppController extends Controller
             ->firstOrFail();
     }
 
-    private function licenseAssignedToAnotherDevice(License $license, string $machineId, string $deviceName): bool
+    private function licenseAssignedToAnotherDevice(License $license, string $deviceId, string $deviceName): bool
     {
-        if ($license->machine_id) {
-            return ! hash_equals($license->machine_id, $machineId);
+        if ($license->resolvedDeviceId()) {
+            return ! hash_equals($license->resolvedDeviceId(), $deviceId);
         }
 
         if (! $license->device_name) {
@@ -224,9 +218,36 @@ class TimerAppController extends Controller
         return ! hash_equals($license->device_name, $deviceName);
     }
 
-    private function licenseMatchesCurrentDevice(License $license, string $machineId): bool
+    private function licenseMatchesCurrentDevice(License $license, string $deviceId): bool
     {
-        return (bool) $license->machine_id && hash_equals($license->machine_id, $machineId);
+        return (bool) $license->resolvedDeviceId() && hash_equals($license->resolvedDeviceId(), $deviceId);
+    }
+
+    private function syncObservedDeviceMetadata(License $license, Request $request, bool $recordPresence): License
+    {
+        $deviceName = $request->string('device_name')->toString();
+        if ($deviceName !== '') {
+            $license->device_name = $deviceName;
+        }
+
+        $machineId = $request->string('machine_id')->toString();
+        if ($machineId !== '') {
+            $license->machine_id = $machineId;
+        }
+
+        $appVersion = $request->string('app_version')->toString();
+        if ($appVersion !== '') {
+            $license->app_version = $appVersion;
+        }
+
+        if ($recordPresence) {
+            $license->last_seen_at = now();
+            $license->last_seen_ip = $request->ip();
+        }
+
+        $license->save();
+
+        return $license->fresh();
     }
 
     private function successResponse(?License $license, string $message): JsonResponse
@@ -235,6 +256,12 @@ class TimerAppController extends Controller
             'success' => true,
             'status' => $license?->toApiArray()['status'] ?? 'active',
             'message' => $message,
+            'device_id' => $license?->resolvedDeviceId(),
+            'deviceId' => $license?->resolvedDeviceId(),
+            'machine_id' => $license?->machine_id,
+            'machineId' => $license?->machine_id,
+            'device_secret' => $license?->device_secret,
+            'deviceSecret' => $license?->device_secret,
             'license' => $license?->toApiArray(),
         ]);
     }
@@ -245,6 +272,12 @@ class TimerAppController extends Controller
             'success' => false,
             'status' => $status,
             'message' => $message,
+            'device_id' => $license?->resolvedDeviceId(),
+            'deviceId' => $license?->resolvedDeviceId(),
+            'machine_id' => $license?->machine_id,
+            'machineId' => $license?->machine_id,
+            'device_secret' => $license?->device_secret,
+            'deviceSecret' => $license?->device_secret,
             'license' => $license?->toApiArray(),
         ], $statusCode);
     }

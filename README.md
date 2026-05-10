@@ -243,9 +243,10 @@ The API validators normalize both naming styles, so the client can send either:
 - `license_key` or `licenseKey`
 - `device_name`, `deviceName`, `pc_name`, `pcName`, or `machineName`
 - `app_version` or `appVersion`
-- `machine_id`, `machineId`, `device_id`, or `deviceId`
+- `device_id` or `deviceId`
+- `machine_id` or `machineId`
 
-`machine_id` is required for license activation, status checks, heartbeats, and revocation.
+`device_id` is the canonical provisioning identifier for license activation, status checks, heartbeats, and revocation. `machine_id` is optional metadata only and does not act as a provisioning fallback.
 
 ### Activate license
 
@@ -261,6 +262,7 @@ Expected payload:
 {
   "license_key": "123456789012",
   "device_name": "OFFICE-PC-01",
+  "device_id": "device-guid-123",
   "machine_id": "machine-guid-123",
   "app_version": "1.0.0"
 }
@@ -270,15 +272,17 @@ How activation works:
 
 1. The backend finds the license by its 12-digit code.
 2. If the license is expired, activation is rejected.
-3. If the license is already assigned to another machine, activation is rejected with HTTP `409`.
-4. If the license is unused, the server binds it to the current PC and machine ID.
-5. The server updates `last_seen_at`, IP address, and app version.
-6. A success JSON payload is returned with the current license data.
+3. If the license is already assigned to another `device_id`, activation is rejected with HTTP `409`.
+4. If the license is unused, the server binds it to the supplied `device_id`.
+5. The server returns the license's auto-generated `device_secret` so TimerApp can keep a stable provisioning token.
+6. The server updates `last_seen_at`, IP address, and app version.
+7. A success JSON payload is returned with the current license data.
 
-Machine binding behavior:
+Device binding behavior:
 
-- The first successful activation stores the supplied `machine_id`.
-- After that, only the same `machine_id` can activate, check status, send heartbeat, or revoke the license.
+- The first successful activation stores the supplied `device_id`.
+- After that, only the same `device_id` can activate, check status, send heartbeat, or revoke the license.
+- `machine_id` is stored only as extra client metadata and can change across PCs without breaking the license.
 - A matching `device_name` alone is not enough to move or reuse a license.
 
 ### Check status
@@ -291,7 +295,7 @@ POST /api/v1/licenses/status
 
 How it works:
 
-- The request must come from the same machine bound to the license.
+- The request must come from the same `device_id` bound to the license.
 - If the device matches and the license is not expired, the server refreshes heartbeat metadata.
 - The response includes the calculated status.
 
@@ -306,7 +310,7 @@ POST /api/v1/licenses/heartbeat
 How it works:
 
 - This is effectively a periodic "still alive" call from TimerApp.
-- It requires the same bound machine validation as status checks.
+- It requires the same bound `device_id` validation as status checks.
 - It updates:
   - `last_seen_at`
   - `last_seen_ip`
@@ -324,9 +328,10 @@ POST /api/v1/licenses/revoke
 
 How it works:
 
-- The current machine must match the bound device.
+- The current `device_id` must match the bound license.
 - The backend clears:
   - `device_name`
+  - `device_id`
   - `machine_id`
   - `activated_at`
   - `last_seen_at`
@@ -405,6 +410,8 @@ Purpose:
 Important fields:
 
 - `code`
+- `device_id`
+- `device_secret`
 - `expires_at`
 - `device_name`
 - `machine_id`

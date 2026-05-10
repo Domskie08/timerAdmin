@@ -236,16 +236,17 @@
                 </div>
 
                 <div class="table-wrap">
-                    <table>
+                    <table class="license-registry-table">
                         <thead>
                             <tr>
                                 <th>License key</th>
+                                <th>Device secret</th>
                                 <th>Term</th>
                                 <th>Expiry date</th>
                                 <th>Device</th>
                                 <th>Provision status</th>
                                 <th>License status</th>
-                                <th>Actions</th>
+                                <th class="action-column">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -259,6 +260,10 @@
                                             {/if}
                                         </td>
                                         <td>
+                                            <strong class="mono secret-value">{license.deviceSecret}</strong>
+                                            <span class="muted">Auto-generated when the license is created.</span>
+                                        </td>
+                                        <td>
                                             <strong>{license.durationLabel}</strong>
                                             <span class="muted">Created {formatDate(license.creationDate, true)}</span>
                                         </td>
@@ -266,6 +271,9 @@
                                         <td>
                                             <strong class="mono">{license.deviceId || 'Not linked yet'}</strong>
                                             <span class="muted">{license.deviceName}</span>
+                                            {#if license.machineId && license.machineId !== license.deviceId}
+                                                <span class="muted">Machine ID {license.machineId}</span>
+                                            {/if}
                                         </td>
                                         <td>
                                             <TablePill status={license.provisionStatus} />
@@ -281,7 +289,7 @@
                                                 <div class="muted">Waiting for Settings activation.</div>
                                             {/if}
                                         </td>
-                                        <td>
+                                        <td class="action-column">
                                             <form
                                                 method="POST"
                                                 action={`/admin/licenses/${license.id}`}
@@ -299,7 +307,7 @@
                                 {/each}
                             {:else}
                                 <tr>
-                                    <td colspan="7">
+                                    <td colspan="8">
                                         <div class="empty-state">No licenses yet. Create the first one using the form above.</div>
                                     </td>
                                 </tr>

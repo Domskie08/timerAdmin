@@ -23,8 +23,9 @@ class StatusLicenseRequest extends FormRequest
     {
         return [
             'license_key' => ['nullable', 'digits:12', 'exists:licenses,code'],
+            'device_id' => ['required', 'string', 'max:255'],
             'device_name' => ['required', 'string', 'max:255'],
-            'machine_id' => ['required', 'string', 'max:255'],
+            'machine_id' => ['nullable', 'string', 'max:255'],
             'app_version' => ['nullable', 'string', 'max:50'],
         ];
     }

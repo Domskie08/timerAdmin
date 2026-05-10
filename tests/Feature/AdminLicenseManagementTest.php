@@ -32,7 +32,14 @@ class AdminLicenseManagementTest extends TestCase
         $this->assertNotNull($license);
         $this->assertSame('3_months', $license->duration);
         $this->assertNull($license->activated_at);
+        $this->assertIsString($license->device_secret);
+        $this->assertSame(64, strlen($license->device_secret));
         $this->assertSame('Frozen', $license->status()->value);
+
+        $this->actingAs($admin)
+            ->get('/admin')
+            ->assertOk()
+            ->assertSeeText($license->device_secret);
     }
 
     public function test_admin_can_delete_license_from_dashboard(): void

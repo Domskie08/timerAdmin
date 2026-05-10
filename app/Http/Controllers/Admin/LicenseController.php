@@ -55,10 +55,12 @@ class LicenseController extends Controller
 
             fputcsv($handle, [
                 'License key',
+                'Device secret',
                 'Creation date',
                 'License term',
                 'Expiry date',
                 'Device ID',
+                'Machine ID',
                 'Device Name',
                 'Provision Status',
                 'License Status',
@@ -70,10 +72,12 @@ class LicenseController extends Controller
 
                 fputcsv($handle, [
                     $license->code,
+                    $license->device_secret,
                     $license->created_at?->format('Y-m-d H:i:s'),
                     License::durationLabel($license->resolvedDuration()),
                     $expiryDate,
-                    $license->machine_id ?: 'Not linked yet',
+                    $license->resolvedDeviceId() ?: 'Not linked yet',
+                    $license->machine_id ?: 'Not set',
                     $deviceName,
                     $license->provisionStatus(),
                     $license->status()->value,

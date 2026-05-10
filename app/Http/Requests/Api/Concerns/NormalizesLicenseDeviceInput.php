@@ -7,16 +7,17 @@ trait NormalizesLicenseDeviceInput
     protected function normalizeLicenseDeviceInput(): array
     {
         $licenseKey = $this->firstFilledInput(['license_key', 'licenseKey']);
+        $machineId = $this->firstFilledInput(['machine_id', 'machineId']);
         $deviceId = $this->firstFilledInput(['device_id', 'deviceId']);
         $deviceName = $this->firstFilledInput(['device_name', 'deviceName', 'pc_name', 'pcName', 'machineName']);
-        $machineId = $this->firstFilledInput(['machine_id', 'machineId'], $deviceId);
 
-        if (! $deviceName && $machineId) {
-            $deviceName = 'Device '.$machineId;
+        if (! $deviceName && $deviceId) {
+            $deviceName = 'Device '.$deviceId;
         }
 
         return [
             'license_key' => $licenseKey,
+            'device_id' => $deviceId,
             'device_name' => $deviceName,
             'app_version' => $this->firstFilledInput(['app_version', 'appVersion']),
             'machine_id' => $machineId,

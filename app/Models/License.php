@@ -21,7 +21,9 @@ class License extends Model
         'duration',
         'expires_at',
         'device_name',
+        'device_id',
         'machine_id',
+        'device_secret',
         'activated_at',
         'last_seen_at',
         'last_seen_ip',
@@ -34,6 +36,15 @@ class License extends Model
         'activated_at' => 'datetime',
         'last_seen_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (License $license): void {
+            if (! is_string($license->device_secret) || trim($license->device_secret) === '') {
+                $license->device_secret = self::generateDeviceSecret();
+            }
+        });
+    }
 
     public function creator(): BelongsTo
     {
@@ -89,6 +100,15 @@ class License extends Model
         throw new \InvalidArgumentException('Unsupported license duration.');
     }
 
+    public static function generateDeviceSecret(): string
+    {
+        do {
+            $secret = bin2hex(random_bytes(32));
+        } while (self::query()->where('device_secret', $secret)->exists());
+
+        return $secret;
+    }
+
     public function resolvedDuration(): string
     {
         if (is_string($this->duration) && $this->duration !== '') {
@@ -108,9 +128,14 @@ class License extends Model
         return ! $this->isActivated();
     }
 
+    public function resolvedDeviceId(): ?string
+    {
+        return $this->device_id;
+    }
+
     public function isProvisioned(): bool
     {
-        return (bool) ($this->machine_id ?: $this->device_name);
+        return (bool) ($this->resolvedDeviceId() ?: $this->device_name);
     }
 
     public function provisionStatus(): string
@@ -166,12 +191,13 @@ class License extends Model
         return [
             'id' => $this->id,
             'licenseKey' => $this->code,
+            'deviceSecret' => $this->device_secret,
             'duration' => $this->resolvedDuration(),
             'durationLabel' => self::durationLabel($this->resolvedDuration()),
             'creationDate' => $this->created_at?->toIso8601String(),
             'expiryDate' => $expiryDate?->toDateString(),
+            'deviceId' => $this->resolvedDeviceId(),
             'machineId' => $this->machine_id,
-            'deviceId' => $this->machine_id,
             'deviceName' => $deviceName,
             'provisionStatus' => $this->provisionStatus(),
             'status' => $licenseStatus,
@@ -191,12 +217,16 @@ class License extends Model
             'id' => $this->id,
             'license_key' => $this->code,
             'licenseKey' => $this->code,
+            'device_id' => $this->resolvedDeviceId(),
+            'deviceId' => $this->resolvedDeviceId(),
             'machine_id' => $this->machine_id,
             'machineId' => $this->machine_id,
+            'device_secret' => $this->device_secret,
+            'deviceSecret' => $this->device_secret,
+            'secret_key' => $this->device_secret,
+            'secretKey' => $this->device_secret,
             'device_name' => $this->device_name,
             'deviceName' => $this->device_name,
-            'device_id' => $this->machine_id,
-            'deviceId' => $this->machine_id,
             'expires_at' => $expiryDate?->toDateString(),
             'expiresAt' => $expiryDate?->toDateString(),
             'duration' => $this->resolvedDuration(),
@@ -210,7 +240,10 @@ class License extends Model
             'app_version' => $this->app_version,
             'appVersion' => $this->app_version,
             'entitlements' => [],
-            'metadata' => [],
+            'metadata' => [
+                'device_secret' => $this->device_secret,
+                'deviceSecret' => $this->device_secret,
+            ],
         ];
     }
 }
