@@ -21,6 +21,11 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn (): ?string => $request->session()->get('success'),
                 'error' => fn (): ?string => $request->session()->get('error'),
             ],
+            'formState' => [
+                'licenseDuration' => fn (): ?string => $request->session()->getOldInput('duration'),
+                'renewLicenseCode' => fn (): ?string => $request->session()->getOldInput('renew_license_code'),
+                'renewTargetLicenseId' => fn (): ?string => $request->session()->getOldInput('target_license_id'),
+            ],
         ]);
     }
 }

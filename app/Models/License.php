@@ -6,6 +6,7 @@ use App\Enums\LicenseStatus;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class License extends Model
 {
@@ -24,6 +25,8 @@ class License extends Model
         'device_id',
         'machine_id',
         'device_secret',
+        'consumed_by_license_id',
+        'consumed_at',
         'activated_at',
         'last_seen_at',
         'last_seen_ip',
@@ -33,6 +36,7 @@ class License extends Model
 
     protected $casts = [
         'expires_at' => 'date',
+        'consumed_at' => 'datetime',
         'activated_at' => 'datetime',
         'last_seen_at' => 'datetime',
     ];
@@ -49,6 +53,16 @@ class License extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function consumedFor(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'consumed_by_license_id');
+    }
+
+    public function renewalCodes(): HasMany
+    {
+        return $this->hasMany(self::class, 'consumed_by_license_id');
     }
 
     public static function durationOptions(): array
@@ -133,9 +147,14 @@ class License extends Model
         return $this->device_id;
     }
 
+    public function hasBoundDevice(): bool
+    {
+        return (bool) $this->resolvedDeviceId();
+    }
+
     public function isProvisioned(): bool
     {
-        return (bool) ($this->resolvedDeviceId() ?: $this->device_name);
+        return $this->hasBoundDevice();
     }
 
     public function provisionStatus(): string
@@ -167,6 +186,16 @@ class License extends Model
             && (bool) $this->device_name
             && ! $this->isExpired()
             && $this->last_seen_at?->gte(now()->subMinutes(config('timer.active_window_minutes')));
+    }
+
+    public function isConsumedForRenewal(): bool
+    {
+        return (bool) ($this->consumed_by_license_id && $this->consumed_at);
+    }
+
+    public function canReceiveRenewal(): bool
+    {
+        return $this->hasBoundDevice() && ! $this->isConsumedForRenewal();
     }
 
     public function status(): LicenseStatus
@@ -205,6 +234,18 @@ class License extends Model
             'lastSeenAt' => $this->last_seen_at?->toIso8601String(),
             'activatedAt' => $this->activated_at?->toIso8601String(),
             'appVersion' => $this->app_version,
+            'canRenew' => $this->canReceiveRenewal(),
+            'isConsumedForRenewal' => $this->isConsumedForRenewal(),
+            'consumedAt' => $this->consumed_at?->toIso8601String(),
+            'consumedForLicenseKey' => $this->consumedFor?->code,
+            'renewalHistory' => $this->renewalCodes
+                ->map(fn (License $renewal): array => [
+                    'licenseKey' => $renewal->code,
+                    'durationLabel' => self::durationLabel($renewal->resolvedDuration()),
+                    'consumedAt' => $renewal->consumed_at?->toIso8601String(),
+                ])
+                ->values()
+                ->all(),
         ];
     }
 

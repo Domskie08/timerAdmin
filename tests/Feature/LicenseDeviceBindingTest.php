@@ -166,6 +166,9 @@ class LicenseDeviceBindingTest extends TestCase
         $freshLicense = $license->fresh();
 
         $this->assertNull($freshLicense->activated_at);
+        $this->assertNull($freshLicense->device_id);
+        $this->assertNull($freshLicense->device_name);
+        $this->assertNull($freshLicense->machine_id);
         $this->assertNull($freshLicense->last_seen_at);
     }
 
@@ -214,7 +217,36 @@ class LicenseDeviceBindingTest extends TestCase
         $freshLicense = $license->fresh();
 
         $this->assertNull($freshLicense->activated_at);
+        $this->assertSame('device-original', $freshLicense->device_id);
+        $this->assertSame('OFFICE-PC-01', $freshLicense->device_name);
+        $this->assertSame('machine-original', $freshLicense->machine_id);
         $this->assertNull($freshLicense->last_seen_at);
+    }
+
+    public function test_consumed_renewal_license_cannot_be_activated(): void
+    {
+        $targetLicense = $this->createLicense([
+            'code' => '123456789012',
+            'device_id' => 'device-original',
+            'device_name' => 'OFFICE-PC-01',
+            'machine_id' => 'machine-original',
+            'activated_at' => now(),
+        ]);
+
+        $renewalLicense = $this->createLicense([
+            'code' => '999999999999',
+            'consumed_by_license_id' => $targetLicense->id,
+            'consumed_at' => now(),
+        ]);
+
+        $this->postJson('/api/v1/licenses/activate', [
+            'license_key' => $renewalLicense->code,
+            'device_name' => 'OFFICE-PC-02',
+            'device_id' => 'device-other',
+        ])
+            ->assertStatus(409)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'This license code has already been consumed for renewal.');
     }
 
     public function test_status_without_matching_license_key_or_device_id_returns_inactive(): void

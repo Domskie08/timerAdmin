@@ -27,9 +27,12 @@ class TimerAppController extends Controller
 
             $deviceName = $request->string('device_name')->toString();
             $deviceId = $request->string('device_id')->toString();
-            $machineId = $request->string('machine_id')->toString();
 
-            if ($this->licenseAssignedToAnotherDevice($license, $deviceId, $deviceName)) {
+            if ($license->isConsumedForRenewal()) {
+                return $this->errorResponse($license, 'This license code has already been consumed for renewal.', 409, 'inactive');
+            }
+
+            if ($this->licenseAssignedToAnotherDevice($license, $deviceId)) {
                 return response()->json([
                     'success' => false,
                     'status' => 'in_use',
@@ -77,16 +80,21 @@ class TimerAppController extends Controller
             ], 404);
         }
 
+        if ($license->isConsumedForRenewal()) {
+            return $this->errorResponse($license, 'This license code has already been consumed for renewal.', 409, 'inactive');
+        }
+
         if ($license->isFrozen()) {
             if ($this->licenseAssignedToAnotherDevice(
                 $license,
-                $deviceId,
-                $request->string('device_name')->toString()
+                $deviceId
             )) {
                 return $this->errorResponse($license, 'This device is not linked to the supplied license.', 409, 'inactive');
             }
 
-            $license = $this->syncObservedDeviceMetadata($license, $request, false);
+            if ($license->resolvedDeviceId()) {
+                $license = $this->syncObservedDeviceMetadata($license, $request, false);
+            }
 
             return $this->successResponse($license, 'License is frozen until activated from Settings.');
         }
@@ -119,16 +127,21 @@ class TimerAppController extends Controller
             ], 404);
         }
 
+        if ($license->isConsumedForRenewal()) {
+            return $this->errorResponse($license, 'This license code has already been consumed for renewal.', 409, 'inactive');
+        }
+
         if ($license->isFrozen()) {
             if ($this->licenseAssignedToAnotherDevice(
                 $license,
-                $deviceId,
-                $request->string('device_name')->toString()
+                $deviceId
             )) {
                 return $this->errorResponse($license, 'This device is not linked to the supplied license.', 409, 'inactive');
             }
 
-            $license = $this->syncObservedDeviceMetadata($license, $request, false);
+            if ($license->resolvedDeviceId()) {
+                $license = $this->syncObservedDeviceMetadata($license, $request, false);
+            }
 
             return $this->successResponse($license, 'License is frozen until activated from Settings.');
         }
@@ -205,17 +218,13 @@ class TimerAppController extends Controller
             ->firstOrFail();
     }
 
-    private function licenseAssignedToAnotherDevice(License $license, string $deviceId, string $deviceName): bool
+    private function licenseAssignedToAnotherDevice(License $license, string $deviceId): bool
     {
-        if ($license->resolvedDeviceId()) {
-            return ! hash_equals($license->resolvedDeviceId(), $deviceId);
-        }
-
-        if (! $license->device_name) {
+        if (! $license->resolvedDeviceId()) {
             return false;
         }
 
-        return ! hash_equals($license->device_name, $deviceName);
+        return ! hash_equals($license->resolvedDeviceId(), $deviceId);
     }
 
     private function licenseMatchesCurrentDevice(License $license, string $deviceId): bool

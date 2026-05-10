@@ -33,6 +33,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('/licenses', [LicenseController::class, 'store'])->name('licenses.store');
     Route::get('/licenses/export', [LicenseController::class, 'export'])->name('licenses.export');
+    Route::post('/licenses/{license}/renew', [LicenseController::class, 'renew'])
+        ->whereNumber('license')
+        ->name('licenses.renew');
     Route::delete('/licenses/{license}', [LicenseController::class, 'destroy'])
         ->whereNumber('license')
         ->name('licenses.destroy');

@@ -15,6 +15,7 @@
     export let updates = [];
     export let dashboardPhotos = [];
     export let errors = {};
+    export let formState = {};
 
     let isUploadingUpdate = false;
     let selectedUpdateFileName = '';
@@ -168,6 +169,12 @@
         deletingDashboardPhotoIds = [...deletingDashboardPhotoIds, photo.id];
     };
 
+    const showRenewLicenseError = (license) =>
+        Number(formState?.renewTargetLicenseId ?? 0) === license.id && Boolean(errors?.renew_license_code);
+
+    const renewalInputValue = (license) =>
+        Number(formState?.renewTargetLicenseId ?? 0) === license.id ? formState?.renewLicenseCode ?? '' : '';
+
     onDestroy(() => {
         stopUploadTimer();
     });
@@ -208,7 +215,7 @@
                                         type="radio"
                                         name="duration"
                                         value={option.value}
-                                        checked={option.value === defaultLicenseDuration}
+                                        checked={option.value === (formState?.licenseDuration || defaultLicenseDuration)}
                                         required
                                     />
                                     <span>{option.label}</span>
@@ -266,6 +273,16 @@
                                         <td>
                                             <strong>{license.durationLabel}</strong>
                                             <span class="muted">Created {formatDate(license.creationDate, true)}</span>
+                                            {#if license.isConsumedForRenewal && license.consumedAt}
+                                                <span class="muted">Consumed {formatDate(license.consumedAt, true)}</span>
+                                            {/if}
+                                            {#if license.renewalHistory?.length}
+                                                {#each license.renewalHistory as renewal}
+                                                    <span class="muted">
+                                                        Renewed by {renewal.licenseKey} for {renewal.durationLabel} on {formatDate(renewal.consumedAt, true)}
+                                                    </span>
+                                                {/each}
+                                            {/if}
                                         </td>
                                         <td>{license.expiryDate ? formatDate(license.expiryDate) : 'Starts after activation'}</td>
                                         <td>
@@ -273,6 +290,9 @@
                                             <span class="muted">{license.deviceName}</span>
                                             {#if license.machineId && license.machineId !== license.deviceId}
                                                 <span class="muted">Machine ID {license.machineId}</span>
+                                            {/if}
+                                            {#if license.isConsumedForRenewal && license.consumedForLicenseKey}
+                                                <span class="muted">Consumed for renewal of {license.consumedForLicenseKey}</span>
                                             {/if}
                                         </td>
                                         <td>
@@ -290,18 +310,45 @@
                                             {/if}
                                         </td>
                                         <td class="action-column">
-                                            <form
-                                                method="POST"
-                                                action={`/admin/licenses/${license.id}`}
-                                                class="inline-action-form"
-                                                on:submit={(event) => handleLicenseDeleteSubmit(event, license)}
-                                            >
-                                                <input type="hidden" name="_token" value={csrfToken} />
-                                                <input type="hidden" name="_method" value="DELETE" />
-                                                <button type="submit" class="danger-button" disabled={isDeletingLicense(license.id)}>
-                                                    {isDeletingLicense(license.id) ? 'Deleting...' : 'Delete'}
-                                                </button>
-                                            </form>
+                                            <div class="license-action-stack">
+                                                {#if license.canRenew}
+                                                    <form
+                                                        method="POST"
+                                                        action={`/admin/licenses/${license.id}/renew`}
+                                                        class="inline-action-form renew-license-form"
+                                                    >
+                                                        <input type="hidden" name="_token" value={csrfToken} />
+                                                        <input type="hidden" name="target_license_id" value={license.id} />
+                                                        <input
+                                                            class="renew-license-input"
+                                                            type="text"
+                                                            name="renew_license_code"
+                                                            placeholder="Renew license code"
+                                                            inputmode="numeric"
+                                                            maxlength="12"
+                                                            value={renewalInputValue(license)}
+                                                            required
+                                                        />
+                                                        {#if showRenewLicenseError(license)}
+                                                            <div class="field-error">{errors.renew_license_code}</div>
+                                                        {/if}
+                                                        <button type="submit" class="secondary-button">Renew</button>
+                                                    </form>
+                                                {/if}
+
+                                                <form
+                                                    method="POST"
+                                                    action={`/admin/licenses/${license.id}`}
+                                                    class="inline-action-form"
+                                                    on:submit={(event) => handleLicenseDeleteSubmit(event, license)}
+                                                >
+                                                    <input type="hidden" name="_token" value={csrfToken} />
+                                                    <input type="hidden" name="_method" value="DELETE" />
+                                                    <button type="submit" class="danger-button" disabled={isDeletingLicense(license.id)}>
+                                                        {isDeletingLicense(license.id) ? 'Deleting...' : 'Delete'}
+                                                    </button>
+                                                </form>
+                                            </div>
                                         </td>
                                     </tr>
                                 {/each}

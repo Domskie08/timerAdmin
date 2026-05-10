@@ -15,6 +15,12 @@ class DashboardController extends Controller
     public function index(): Response
     {
         $licenses = License::query()
+            ->with([
+                'consumedFor:id,code',
+                'renewalCodes' => fn ($query) => $query
+                    ->select(['id', 'code', 'duration', 'expires_at', 'created_at', 'consumed_at', 'consumed_by_license_id'])
+                    ->latest('consumed_at'),
+            ])
             ->latest()
             ->get();
 

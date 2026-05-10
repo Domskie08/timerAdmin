@@ -869,8 +869,35 @@ td strong {
 }
 
 .license-registry-table .inline-action-form,
-.license-registry-table .danger-button {
+.license-registry-table .danger-button,
+.license-registry-table .secondary-button {
     width: 100%;
+}
+
+.license-action-stack {
+    display: grid;
+    gap: 10px;
+}
+
+.renew-license-form {
+    display: grid;
+    gap: 8px;
+}
+
+.renew-license-input {
+    width: 100%;
+    border-radius: 14px;
+    border: 1px solid rgba(135, 170, 214, 0.18);
+    background: rgba(5, 13, 24, 0.9);
+    color: var(--text);
+    padding: 11px 12px;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.renew-license-input:focus {
+    border-color: rgba(56, 214, 255, 0.58);
+    box-shadow: 0 0 0 3px rgba(56, 214, 255, 0.12);
 }
 
 @media (max-width: 960px) {
