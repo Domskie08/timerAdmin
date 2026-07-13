@@ -13,23 +13,18 @@ class StoreAppUpdateRequest extends FormRequest
 
     public function rules(): array
     {
-        $maxUploadKb = (int) config('timer.update_upload_max_kb');
-
         return [
             'version' => ['required', 'string', 'max:50'],
             'title' => ['required', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:4000'],
-            'package' => ['required', 'file', 'mimes:zip,exe,msi', 'max:'.$maxUploadKb],
-            'external_download_url' => ['nullable', 'url', 'max:2048'],
+            'external_download_url' => ['required', 'url', 'max:2048'],
         ];
     }
 
     public function messages(): array
     {
-        $maxUploadMb = (int) ceil(config('timer.update_upload_max_kb') / 1024);
-
         return [
-            'package.max' => "The update package may not be greater than {$maxUploadMb} MB.",
+            'external_download_url.required' => 'The Google Drive download URL is required.',
         ];
     }
 }

@@ -9,6 +9,7 @@ use App\Http\Requests\Api\StatusLicenseRequest;
 use App\Models\AppUpdate;
 use App\Models\License;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -183,9 +184,13 @@ class TimerAppController extends Controller
         ]);
     }
 
-    public function download(AppUpdate $appUpdate): StreamedResponse
+    public function download(AppUpdate $appUpdate): RedirectResponse|StreamedResponse
     {
         abort_unless($appUpdate->isPublished(), 404);
+
+        if ($appUpdate->external_download_url) {
+            return redirect()->away($appUpdate->external_download_url);
+        }
 
         return Storage::disk('public')->download($appUpdate->file_path, $appUpdate->file_name);
     }

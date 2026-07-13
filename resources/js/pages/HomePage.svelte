@@ -132,21 +132,13 @@
             {#if latestUpdate}
                 <div class="update-callout compact-update">
                     <strong>{latestUpdate.title}</strong>
-                    <p class="section-copy">{latestUpdate.description || 'An update package is ready for TimerApp clients.'}</p>
+                    <p class="section-copy">{latestUpdate.description || 'A TimerApp download is ready for clients.'}</p>
                     <div class="tag-row">
                         <span class="pill-tag">{latestUpdate.fileName}</span>
                         <span class="pill-tag">{formatDate(latestUpdate.publishedAt, true)}</span>
                     </div>
                     <div class="tag-row">
                         <a class="secondary-button compact-action" href={latestUpdate.downloadUrl}>Download Latest</a>
-                        {#if latestUpdate.externalDownloadUrl}
-                            <a
-                                class="secondary-button compact-action"
-                                href={latestUpdate.externalDownloadUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >Google Drive</a>
-                        {/if}
                         <Link href="/support" class="ghost-button compact-action">All Versions</Link>
                     </div>
                 </div>

@@ -10,7 +10,7 @@ TimerAdmin has 3 main jobs:
 
 1. Admins generate 12-digit license keys.
 2. TimerApp clients activate a license and send heartbeats so the portal can show whether a device is active.
-3. Admins publish news and upload the latest TimerApp installer package for clients to discover through the API.
+3. Admins publish news and link the latest TimerApp installer package for clients to discover through the API.
 
 There are 3 main surfaces in the app:
 
@@ -25,7 +25,7 @@ There are 3 main surfaces in the app:
 - Frontend pages: Svelte 5
 - Asset bundling: Vite
 - Database: MySQL
-- File storage: Laravel `public` disk
+- File storage: Laravel `public` disk for dashboard photos
 - Auth: Laravel session auth
 
 ## How the request flow works
@@ -92,7 +92,7 @@ What the dashboard shows:
 - Form to create a new license
 - CSV export link for all licenses
 - License registry table
-- Form to upload a TimerApp update package
+- Form to publish a TimerApp update download link
 - Form to publish a news post
 - Recent news list
 - Recent app update list
@@ -181,35 +181,24 @@ Published visibility is controlled by `NewsPost::scopePubliclyVisible()`:
 - `published_at` is `NULL`, or
 - `published_at <= now()`
 
-### 5. Uploading a TimerApp update
+### 5. Publishing a TimerApp update
 
 - Route: `POST /admin/updates`
 - Controller: `App\Http\Controllers\Admin\AppUpdateController`
 - Request validator: `StoreAppUpdateRequest`
 
-Allowed file types:
+Required download source:
 
-- `.zip`
-- `.exe`
-- `.msi`
-
-Optional mirror:
-
-- A Google Drive or other external download URL can be attached to the release.
-- The uploaded local package remains the primary fallback download.
-
-Max upload size:
-
-- `102400 KB` according to the validator
+- A Google Drive or other external download URL is required.
+- No local release file is uploaded through the admin dashboard.
 
 How it works:
 
-1. The uploaded file is stored on the `public` disk under `storage/app/public/updates/...`.
-2. The stored filename is normalized into a timestamped slug.
-3. A database transaction runs.
-4. All existing `app_updates` rows are marked `is_active = false`.
-5. A new `app_updates` row is created with `is_active = true`.
-6. If supplied, the external mirror URL is saved with the release metadata.
+1. The admin enters release metadata and the Google Drive download URL.
+2. A database transaction runs.
+3. All existing `app_updates` rows are marked `is_active = false`.
+4. A new `app_updates` row is created with `is_active = true`.
+5. The external download URL is saved with the release metadata.
 
 Important behavior:
 
@@ -220,7 +209,7 @@ Important behavior:
 
 Scheduling nuance:
 
-- If you upload a future-dated release, older releases are still deactivated immediately.
+- If you publish a future-dated release later, older releases are still deactivated immediately.
 - That means there may be a period where no update is considered live until the new `published_at` time arrives.
 
 ## TimerApp API
@@ -391,8 +380,8 @@ GET /api/v1/updates/{id}/download
 How it works:
 
 - The update must be active and published.
-- Laravel streams the file from the `public` disk with the original filename.
-- If an update has `externalDownloadUrl`, public pages show it as an optional mirror link.
+- Laravel redirects the request to the saved external download URL.
+- Public pages use `downloadUrl`, so users can click Download without seeing a separate mirror button.
 
 ## Database model
 
@@ -447,7 +436,7 @@ Important fields:
 
 Purpose:
 
-- Stores metadata for desktop app packages available to TimerApp clients
+- Stores metadata and external download links for desktop app packages available to TimerApp clients
 
 Important fields:
 
@@ -491,11 +480,11 @@ What the frontend receives from Laravel:
 
 ## File storage
 
-Uploaded app packages are stored on Laravel's `public` disk.
+Dashboard photos are stored on Laravel's `public` disk. TimerApp update packages are linked through Google Drive or another external URL.
 
 In practice this means:
 
-- Physical storage path: `storage/app/public/updates/...`
+- Physical storage path for photos: `storage/app/public/dashboard-photos/...`
 - Public symlink path: `public/storage/...`
 
 That is why this command is required during setup:

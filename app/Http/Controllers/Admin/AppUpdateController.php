@@ -9,32 +9,24 @@ use App\Support\PhilippineInternetClock;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class AppUpdateController extends Controller
 {
     public function store(StoreAppUpdateRequest $request): RedirectResponse
     {
-        $package = $request->file('package');
         $publishedAt = PhilippineInternetClock::now();
-        $externalDownloadUrl = $request->string('external_download_url')->trim()->toString() ?: null;
-        $originalName = pathinfo($package->getClientOriginalName(), PATHINFO_FILENAME);
-        $extension = $package->getClientOriginalExtension();
-        $slug = Str::slug($originalName);
-        $slug = $slug !== '' ? $slug : 'timerapp-update';
-        $storedName = $publishedAt->format('YmdHis').'-'.$slug.'.'.$extension;
-        $path = $package->storeAs('updates', $storedName, 'public');
+        $externalDownloadUrl = $request->string('external_download_url')->trim()->toString();
 
-        DB::transaction(function () use ($path, $package, $publishedAt, $request, $externalDownloadUrl): void {
+        DB::transaction(function () use ($publishedAt, $request, $externalDownloadUrl): void {
             AppUpdate::query()->update(['is_active' => false]);
 
             AppUpdate::query()->create([
                 'title' => $request->string('title')->toString(),
                 'version' => $request->string('version')->toString(),
                 'description' => $request->string('description')->toString() ?: null,
-                'file_path' => $path,
-                'file_name' => $package->getClientOriginalName(),
-                'file_size' => $package->getSize(),
+                'file_path' => 'external-download',
+                'file_name' => 'Google Drive download',
+                'file_size' => 0,
                 'external_download_url' => $externalDownloadUrl,
                 'is_active' => true,
                 'published_at' => $publishedAt,
@@ -44,7 +36,7 @@ class AppUpdateController extends Controller
 
         return redirect()
             ->route('admin.dashboard')
-            ->with('success', 'TimerApp update uploaded and published automatically using the upload time in the Philippines.');
+            ->with('success', 'TimerApp update published with the Google Drive download link.');
     }
 
     public function destroy(AppUpdate $appUpdate): RedirectResponse

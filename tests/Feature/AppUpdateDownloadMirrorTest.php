@@ -5,8 +5,6 @@ namespace Tests\Feature;
 use App\Models\AppUpdate;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AppUpdateDownloadMirrorTest extends TestCase
@@ -15,7 +13,6 @@ class AppUpdateDownloadMirrorTest extends TestCase
 
     public function test_admin_can_attach_external_download_mirror_to_update(): void
     {
-        Storage::fake('public');
         config(['timer.philippine_time_url' => null]);
 
         $admin = User::query()->create([
@@ -33,7 +30,6 @@ class AppUpdateDownloadMirrorTest extends TestCase
                 'title' => 'TimerApp 1.2.0',
                 'description' => 'Adds a faster download mirror.',
                 'external_download_url' => $mirrorUrl,
-                'package' => UploadedFile::fake()->create('TimerApp-1.2.0.zip', 512, 'application/zip'),
             ])
             ->assertRedirect(route('admin.dashboard'))
             ->assertSessionHas('success');
@@ -42,6 +38,9 @@ class AppUpdateDownloadMirrorTest extends TestCase
 
         $this->assertNotNull($update);
         $this->assertSame($mirrorUrl, $update->external_download_url);
+        $this->assertSame('external-download', $update->file_path);
+        $this->assertSame('Google Drive download', $update->file_name);
+        $this->assertSame(0, $update->file_size);
 
         $update->forceFill(['published_at' => now()->subMinute()])->save();
 
@@ -50,5 +49,8 @@ class AppUpdateDownloadMirrorTest extends TestCase
             ->assertJsonPath('has_update', true)
             ->assertJsonPath('update.externalDownloadUrl', $mirrorUrl)
             ->assertJsonPath('update.downloadUrl', route('api.v1.updates.download', $update));
+
+        $this->get(route('api.v1.updates.download', $update))
+            ->assertRedirect($mirrorUrl);
     }
 }

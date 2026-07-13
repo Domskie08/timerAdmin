@@ -1,5 +1,4 @@
 <script>
-    import { onDestroy } from 'svelte';
     import AdminLayout from '@/layouts/AdminLayout.svelte';
     import StatCard from '@/components/StatCard.svelte';
     import TablePill from '@/components/TablePill.svelte';
@@ -17,16 +16,11 @@
     export let errors = {};
     export let formState = {};
 
-    let isUploadingUpdate = false;
-    let selectedUpdateFileName = '';
-    let selectedUpdateFileSizeLabel = '';
     let selectedDashboardPhotoName = '';
     let selectedDashboardPhotoSizeLabel = '';
     let deletingLicenseIds = [];
     let deletingUpdateIds = [];
     let deletingDashboardPhotoIds = [];
-    let uploadElapsedSeconds = 0;
-    let uploadTimerId = null;
 
     const toDateObject = (value) => {
         if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -59,56 +53,10 @@
         return `${megabytes.toFixed(megabytes >= 100 ? 0 : 1)} MB`;
     };
 
-    const formatElapsedTime = (seconds) => {
-        const normalizedSeconds = Math.max(0, Math.floor(seconds));
-        const hours = Math.floor(normalizedSeconds / 3600);
-        const minutes = Math.floor((normalizedSeconds % 3600) / 60);
-        const remainingSeconds = normalizedSeconds % 60;
-
-        if (hours > 0) {
-            return `${hours}:${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
-        }
-
-        return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
-    };
-
-    const stopUploadTimer = () => {
-        if (uploadTimerId) {
-            window.clearInterval(uploadTimerId);
-            uploadTimerId = null;
-        }
-    };
-
-    const handleUpdatePackageChange = (event) => {
-        const file = event.currentTarget?.files?.[0];
-        selectedUpdateFileName = file?.name ?? '';
-        selectedUpdateFileSizeLabel = formatFileSize(file?.size ?? 0);
-    };
-
     const handleDashboardPhotoChange = (event) => {
         const file = event.currentTarget?.files?.[0];
         selectedDashboardPhotoName = file?.name ?? '';
         selectedDashboardPhotoSizeLabel = formatFileSize(file?.size ?? 0);
-    };
-
-    const handleUpdateSubmit = (event) => {
-        if (isUploadingUpdate) {
-            event.preventDefault();
-            return;
-        }
-
-        isUploadingUpdate = true;
-        uploadElapsedSeconds = 0;
-        stopUploadTimer();
-        const startedAtMs = Date.now();
-        uploadTimerId = window.setInterval(() => {
-            uploadElapsedSeconds = Math.floor((Date.now() - startedAtMs) / 1000);
-        }, 1000);
-
-        // Let Svelte render the uploading state before the browser starts the full form submit.
-        event.preventDefault();
-        const form = event.currentTarget;
-        requestAnimationFrame(() => form.submit());
     };
 
     const isDeletingLicense = (licenseId) => deletingLicenseIds.includes(licenseId);
@@ -140,7 +88,7 @@
         }
 
         const confirmed = window.confirm(
-            `Delete "${update.title}" (${update.version})? This removes the uploaded file from the admin portal.`
+            `Delete "${update.title}" (${update.version})? This removes the release from the admin portal.`
         );
 
         if (!confirmed) {
@@ -175,9 +123,6 @@
     const renewalInputValue = (license) =>
         Number(formState?.renewTargetLicenseId ?? 0) === license.id ? formState?.renewLicenseCode ?? '' : '';
 
-    onDestroy(() => {
-        stopUploadTimer();
-    });
 </script>
 
 <svelte:head>
@@ -369,12 +314,12 @@
             <article class="panel">
                 <div class="section-heading">
                     <div>
-                        <h2>Upload TimerApp Update</h2>
-                        <p class="card-subtitle">Upload a release file so TimerApp clients can detect the newest package.</p>
+                        <h2>Publish TimerApp Update</h2>
+                        <p class="card-subtitle">Publish a Google Drive download link so TimerApp clients can detect the newest release.</p>
                     </div>
                 </div>
 
-                <form method="POST" action="/admin/updates" enctype="multipart/form-data" on:submit={handleUpdateSubmit}>
+                <form method="POST" action="/admin/updates">
                     <input type="hidden" name="_token" value={csrfToken} />
 
                     <div class="field">
@@ -393,59 +338,24 @@
                     </div>
 
                     <div class="field">
-                        <label for="external_download_url">Google Drive mirror URL</label>
+                        <label for="external_download_url">Google Drive download URL</label>
                         <input
                             id="external_download_url"
                             type="url"
                             name="external_download_url"
                             placeholder="https://drive.google.com/file/d/.../view?usp=sharing"
                             value={formState?.updateExternalDownloadUrl ?? ''}
+                            required
                         />
                         <div class="field-help">
-                            Optional. Set the Drive file to anyone with the link can view so visitors can use it as a faster mirror.
+                            Set the Drive file to anyone with the link can view so visitors can download it.
                         </div>
                         {#if errors?.external_download_url}
                             <div class="field-error">{errors.external_download_url}</div>
                         {/if}
                     </div>
 
-                    <div class="field">
-                        <label for="package">Release file</label>
-                        <input
-                            id="package"
-                            type="file"
-                            name="package"
-                            accept=".zip,.exe,.msi"
-                            required
-                            on:change={handleUpdatePackageChange}
-                        />
-                        <div class="field-help">
-                            Large local `.exe` uploads can take several minutes. Keep this page open until you are redirected back to the dashboard.
-                        </div>
-                        <div class="field-help">
-                            Publish time is set automatically from the current Philippine time when the upload is completed.
-                        </div>
-                        {#if selectedUpdateFileName}
-                            <div class="field-help">
-                                Selected: {selectedUpdateFileName}{selectedUpdateFileSizeLabel ? ` (${selectedUpdateFileSizeLabel})` : ''}
-                            </div>
-                        {/if}
-                        {#if isUploadingUpdate}
-                            <div class="field-help">
-                                Uploading update package now. This may take a while on `php artisan serve`.
-                            </div>
-                            <div class="field-help">
-                                Elapsed upload time: <span class="mono">{formatElapsedTime(uploadElapsedSeconds)}</span>
-                            </div>
-                        {/if}
-                        {#if errors?.package}
-                            <div class="field-error">{errors.package}</div>
-                        {/if}
-                    </div>
-
-                    <button type="submit" class="primary-button" disabled={isUploadingUpdate}>
-                        {isUploadingUpdate ? `Uploading Update... ${formatElapsedTime(uploadElapsedSeconds)}` : 'Upload Update'}
-                    </button>
+                    <button type="submit" class="primary-button">Publish Update</button>
                 </form>
             </article>
 
@@ -621,7 +531,7 @@
         <article class="panel">
             <div class="section-heading">
                 <h3>Recent App Updates</h3>
-                <span class="chip">{updates.length} upload{updates.length === 1 ? '' : 's'}</span>
+                <span class="chip">{updates.length} release{updates.length === 1 ? '' : 's'}</span>
             </div>
 
             {#if updates.length}
@@ -653,7 +563,7 @@
                             </header>
                             <div class="support-copy">{update.fileName}</div>
                             {#if update.externalDownloadUrl}
-                                <div class="support-copy">Google Drive mirror attached.</div>
+                                <div class="support-copy">Google Drive download link attached.</div>
                             {/if}
                             {#if update.description}
                                 <div class="support-copy">{update.description}</div>
@@ -663,7 +573,7 @@
                     {/each}
                 </div>
             {:else}
-                <div class="empty-state">No TimerApp update packages have been uploaded yet.</div>
+                <div class="empty-state">No TimerApp updates have been published yet.</div>
             {/if}
         </article>
     </section>

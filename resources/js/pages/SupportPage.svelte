@@ -37,7 +37,7 @@
         <p class="eyebrow">Support</p>
         <h1 class="support-title">TimerApp Downloads</h1>
         <p class="section-copy">
-            Download any published TimerApp version uploaded by the admin team.
+            Download any TimerApp version published by the admin team.
         </p>
     </section>
 
@@ -69,14 +69,6 @@
                         </div>
                         <div class="download-actions">
                             <a class="primary-button" href={update.downloadUrl}>Download</a>
-                            {#if update.externalDownloadUrl}
-                                <a
-                                    class="secondary-button"
-                                    href={update.externalDownloadUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                >Google Drive</a>
-                            {/if}
                         </div>
                     </article>
                 {/each}
