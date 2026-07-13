@@ -393,6 +393,23 @@
                     </div>
 
                     <div class="field">
+                        <label for="external_download_url">Google Drive mirror URL</label>
+                        <input
+                            id="external_download_url"
+                            type="url"
+                            name="external_download_url"
+                            placeholder="https://drive.google.com/file/d/.../view?usp=sharing"
+                            value={formState?.updateExternalDownloadUrl ?? ''}
+                        />
+                        <div class="field-help">
+                            Optional. Set the Drive file to anyone with the link can view so visitors can use it as a faster mirror.
+                        </div>
+                        {#if errors?.external_download_url}
+                            <div class="field-error">{errors.external_download_url}</div>
+                        {/if}
+                    </div>
+
+                    <div class="field">
                         <label for="package">Release file</label>
                         <input
                             id="package"
@@ -635,6 +652,9 @@
                                 </form>
                             </header>
                             <div class="support-copy">{update.fileName}</div>
+                            {#if update.externalDownloadUrl}
+                                <div class="support-copy">Google Drive mirror attached.</div>
+                            {/if}
                             {#if update.description}
                                 <div class="support-copy">{update.description}</div>
                             {/if}

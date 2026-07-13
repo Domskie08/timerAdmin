@@ -20,6 +20,7 @@ class StoreAppUpdateRequest extends FormRequest
             'title' => ['required', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:4000'],
             'package' => ['required', 'file', 'mimes:zip,exe,msi', 'max:'.$maxUploadKb],
+            'external_download_url' => ['nullable', 'url', 'max:2048'],
         ];
     }
 

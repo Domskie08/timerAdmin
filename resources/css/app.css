@@ -757,6 +757,14 @@ td strong {
     margin: 0;
 }
 
+.download-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
 .photo-admin-list {
     display: grid;
     gap: 10px;
@@ -934,6 +942,15 @@ td strong {
     .support-version-card {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .download-actions {
+        justify-content: stretch;
+    }
+
+    .download-actions .primary-button,
+    .download-actions .secondary-button {
+        flex: 1 1 160px;
     }
 }
 

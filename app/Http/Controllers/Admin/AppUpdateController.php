@@ -17,6 +17,7 @@ class AppUpdateController extends Controller
     {
         $package = $request->file('package');
         $publishedAt = PhilippineInternetClock::now();
+        $externalDownloadUrl = $request->string('external_download_url')->trim()->toString() ?: null;
         $originalName = pathinfo($package->getClientOriginalName(), PATHINFO_FILENAME);
         $extension = $package->getClientOriginalExtension();
         $slug = Str::slug($originalName);
@@ -24,7 +25,7 @@ class AppUpdateController extends Controller
         $storedName = $publishedAt->format('YmdHis').'-'.$slug.'.'.$extension;
         $path = $package->storeAs('updates', $storedName, 'public');
 
-        DB::transaction(function () use ($path, $package, $publishedAt, $request): void {
+        DB::transaction(function () use ($path, $package, $publishedAt, $request, $externalDownloadUrl): void {
             AppUpdate::query()->update(['is_active' => false]);
 
             AppUpdate::query()->create([
@@ -34,6 +35,7 @@ class AppUpdateController extends Controller
                 'file_path' => $path,
                 'file_name' => $package->getClientOriginalName(),
                 'file_size' => $package->getSize(),
+                'external_download_url' => $externalDownloadUrl,
                 'is_active' => true,
                 'published_at' => $publishedAt,
                 'uploaded_by' => $request->user()?->id,

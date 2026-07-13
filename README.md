@@ -193,6 +193,11 @@ Allowed file types:
 - `.exe`
 - `.msi`
 
+Optional mirror:
+
+- A Google Drive or other external download URL can be attached to the release.
+- The uploaded local package remains the primary fallback download.
+
 Max upload size:
 
 - `102400 KB` according to the validator
@@ -204,6 +209,7 @@ How it works:
 3. A database transaction runs.
 4. All existing `app_updates` rows are marked `is_active = false`.
 5. A new `app_updates` row is created with `is_active = true`.
+6. If supplied, the external mirror URL is saved with the release metadata.
 
 Important behavior:
 
@@ -370,6 +376,7 @@ Returned update fields include:
 - `description`
 - `fileName`
 - `fileSize`
+- `externalDownloadUrl`
 - `publishedAt`
 - `downloadUrl`
 
@@ -385,6 +392,7 @@ How it works:
 
 - The update must be active and published.
 - Laravel streams the file from the `public` disk with the original filename.
+- If an update has `externalDownloadUrl`, public pages show it as an optional mirror link.
 
 ## Database model
 
@@ -449,6 +457,7 @@ Important fields:
 - `file_path`
 - `file_name`
 - `file_size`
+- `external_download_url`
 - `is_active`
 - `published_at`
 - `uploaded_by`

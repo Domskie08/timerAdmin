@@ -67,7 +67,17 @@
                                 <span class="pill-tag">{formatDate(update.publishedAt, true)}</span>
                             </div>
                         </div>
-                        <a class="primary-button" href={update.downloadUrl}>Download</a>
+                        <div class="download-actions">
+                            <a class="primary-button" href={update.downloadUrl}>Download</a>
+                            {#if update.externalDownloadUrl}
+                                <a
+                                    class="secondary-button"
+                                    href={update.externalDownloadUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >Google Drive</a>
+                            {/if}
+                        </div>
                     </article>
                 {/each}
             </div>

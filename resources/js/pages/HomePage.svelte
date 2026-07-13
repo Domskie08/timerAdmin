@@ -139,6 +139,14 @@
                     </div>
                     <div class="tag-row">
                         <a class="secondary-button compact-action" href={latestUpdate.downloadUrl}>Download Latest</a>
+                        {#if latestUpdate.externalDownloadUrl}
+                            <a
+                                class="secondary-button compact-action"
+                                href={latestUpdate.externalDownloadUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >Google Drive</a>
+                        {/if}
                         <Link href="/support" class="ghost-button compact-action">All Versions</Link>
                     </div>
                 </div>

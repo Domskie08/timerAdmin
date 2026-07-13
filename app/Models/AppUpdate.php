@@ -15,6 +15,7 @@ class AppUpdate extends Model
         'file_path',
         'file_name',
         'file_size',
+        'external_download_url',
         'is_active',
         'published_at',
         'uploaded_by',
@@ -53,6 +54,7 @@ class AppUpdate extends Model
             'description' => $this->description,
             'fileName' => $this->file_name,
             'fileSize' => $this->file_size,
+            'externalDownloadUrl' => $this->external_download_url,
             'publishedAt' => $this->published_at?->toIso8601String(),
             'downloadUrl' => route('api.v1.updates.download', $this),
         ];
