@@ -196,6 +196,7 @@
                                 <th>Term</th>
                                 <th>Expiry date</th>
                                 <th>Device</th>
+                                <th>Client</th>
                                 <th>Provision status</th>
                                 <th>License status</th>
                                 <th class="action-column">Actions</th>
@@ -238,6 +239,14 @@
                                             {/if}
                                             {#if license.isConsumedForRenewal && license.consumedForLicenseKey}
                                                 <span class="muted">Consumed for renewal of {license.consumedForLicenseKey}</span>
+                                            {/if}
+                                        </td>
+                                        <td>
+                                            <strong>{license.clientAccountName || 'Unclaimed'}</strong>
+                                            {#if license.clientAccountId}
+                                                <span class="muted">Client account #{license.clientAccountId}</span>
+                                            {:else}
+                                                <span class="muted">Available for client claim</span>
                                             {/if}
                                         </td>
                                         <td>
@@ -299,7 +308,7 @@
                                 {/each}
                             {:else}
                                 <tr>
-                                    <td colspan="8">
+                                    <td colspan="9">
                                         <div class="empty-state">No licenses yet. Create the first one using the form above.</div>
                                     </td>
                                 </tr>

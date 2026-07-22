@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
@@ -14,6 +15,7 @@ class User extends Authenticatable
         'email',
         'password',
         'is_admin',
+        'client_account_id',
     ];
 
     protected $hidden = [
@@ -28,6 +30,11 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_admin' => 'boolean',
         ];
+    }
+
+    public function clientAccount(): BelongsTo
+    {
+        return $this->belongsTo(ClientAccount::class);
     }
 }
 

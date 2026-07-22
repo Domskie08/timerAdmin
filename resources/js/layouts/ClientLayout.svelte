@@ -4,21 +4,25 @@
     export let flash = {};
     export let csrfToken = '';
     export let appName = 'TimerAdmin';
+    export let current = 'dashboard';
+
+    const navClass = (key) => key === current ? 'ghost-button nav-active' : 'ghost-button';
 </script>
 
 <div class="page-shell">
     <header class="admin-header">
         <div class="brand-lockup">
-            <div class="brand-mark">TA</div>
+            <div class="brand-mark">DW</div>
             <div>
-                <h1 class="brand-title">{appName}</h1>
-                <p class="brand-copy">License creation, news publishing, and update delivery.</p>
+                <h1 class="brand-title">DTimer WiFi</h1>
+                <p class="brand-copy">Client admin console for {appName}.</p>
             </div>
         </div>
 
         <div class="header-actions">
-            <Link href="/" class="ghost-button">View Home</Link>
-            <Link href="/admin/clients" class="ghost-button">Clients</Link>
+            <Link href="/client" class={navClass('dashboard')}>Overview</Link>
+            <Link href="/client/dtimer-wifi" class={navClass('dtimer-wifi')}>DTimer WiFi</Link>
+            <Link href="/client/licensing" class={navClass('licensing')}>Licensing</Link>
             <form method="POST" action="/logout">
                 <input type="hidden" name="_token" value={csrfToken} />
                 <button type="submit" class="secondary-button">Logout</button>

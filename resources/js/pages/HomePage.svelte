@@ -92,8 +92,10 @@
                 <div class="hero-actions showcase-actions">
                     {#if auth?.user?.is_admin}
                         <Link href="/admin" class="primary-button">Open Dashboard</Link>
+                    {:else if auth?.user?.client_account_id}
+                        <Link href="/client" class="primary-button">Client Portal</Link>
                     {:else}
-                        <Link href="/admin/login" class="primary-button">Admin Login</Link>
+                        <Link href="/client/login" class="primary-button">Client Login</Link>
                     {/if}
                     <a href="#news" class="secondary-button">View News</a>
                 </div>

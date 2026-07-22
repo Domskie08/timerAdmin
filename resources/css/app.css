@@ -147,6 +147,12 @@ img {
     color: var(--text);
 }
 
+.nav-active {
+    border-color: rgba(56, 214, 255, 0.42);
+    background: rgba(56, 214, 255, 0.1);
+    color: var(--accent);
+}
+
 .primary-button:hover,
 .secondary-button:hover,
 .danger-button:hover,
@@ -712,6 +718,26 @@ td strong {
     border-color: rgba(255, 111, 146, 0.2);
 }
 
+.table-pill.status-online,
+.table-pill.status-clear {
+    background: rgba(118, 247, 208, 0.12);
+    color: var(--accent-soft);
+    border-color: rgba(118, 247, 208, 0.24);
+}
+
+.table-pill.status-offline,
+.table-pill.status-pending {
+    background: rgba(255, 209, 102, 0.12);
+    color: var(--warning);
+    border-color: rgba(255, 209, 102, 0.24);
+}
+
+.table-pill.status-unlinked {
+    background: rgba(147, 168, 194, 0.12);
+    color: #d0deef;
+    border-color: rgba(147, 168, 194, 0.2);
+}
+
 .list-rail {
     display: grid;
     gap: 12px;
@@ -843,6 +869,23 @@ td strong {
     margin-top: 16px;
     color: var(--muted);
     font-size: 0.88rem;
+}
+
+.form-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.page-heading {
+    margin-bottom: 0;
+}
+
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
 }
 
 .admin-main {
@@ -981,7 +1024,13 @@ td strong {
 
     .site-nav,
     .header-actions,
-    .hero-actions {
+    .hero-actions,
+    .form-actions {
         width: 100%;
+    }
+
+    .form-actions .primary-button,
+    .form-actions .secondary-button {
+        flex: 1 1 180px;
     }
 }

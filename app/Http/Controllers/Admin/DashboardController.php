@@ -16,6 +16,7 @@ class DashboardController extends Controller
     {
         $licenses = License::query()
             ->with([
+                'clientAccount:id,name',
                 'consumedFor:id,code',
                 'renewalCodes' => fn ($query) => $query
                     ->select(['id', 'code', 'duration', 'expires_at', 'created_at', 'consumed_at', 'consumed_by_license_id'])

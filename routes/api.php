@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\TimerAppController;
+use App\Http\Controllers\Api\DtimerWifiController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
@@ -12,6 +13,15 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
     Route::post('/licenses/heartbeat', [TimerAppController::class, 'heartbeat'])
         ->name('licenses.heartbeat');
+
+    Route::post('/dtimer/machines/link', [DtimerWifiController::class, 'link'])
+        ->name('dtimer.machines.link');
+
+    Route::post('/dtimer/heartbeat', [DtimerWifiController::class, 'heartbeat'])
+        ->name('dtimer.heartbeat');
+
+    Route::post('/dtimer/coin-sales/batch', [DtimerWifiController::class, 'storeCoinSales'])
+        ->name('dtimer.coin-sales.batch');
 
     Route::get('/updates/latest', [TimerAppController::class, 'latestUpdate'])
         ->name('updates.latest');

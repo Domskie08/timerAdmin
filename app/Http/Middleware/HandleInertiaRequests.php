@@ -14,7 +14,7 @@ class HandleInertiaRequests extends Middleware
         return array_merge(parent::share($request), [
             'appName' => config('app.name'),
             'auth' => [
-                'user' => $request->user()?->only('id', 'name', 'email', 'is_admin'),
+                'user' => $request->user()?->only('id', 'name', 'email', 'is_admin', 'client_account_id'),
             ],
             'csrfToken' => csrf_token(),
             'flash' => [

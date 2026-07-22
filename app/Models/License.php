@@ -7,6 +7,7 @@ use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class License extends Model
 {
@@ -32,6 +33,7 @@ class License extends Model
         'last_seen_ip',
         'app_version',
         'created_by',
+        'client_account_id',
     ];
 
     protected $casts = [
@@ -55,6 +57,11 @@ class License extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function clientAccount(): BelongsTo
+    {
+        return $this->belongsTo(ClientAccount::class);
+    }
+
     public function consumedFor(): BelongsTo
     {
         return $this->belongsTo(self::class, 'consumed_by_license_id');
@@ -63,6 +70,23 @@ class License extends Model
     public function renewalCodes(): HasMany
     {
         return $this->hasMany(self::class, 'consumed_by_license_id');
+    }
+
+    public function dtimerMachine(): HasOne
+    {
+        return $this->hasOne(DtimerMachine::class);
+    }
+
+    public function revocations(): HasMany
+    {
+        return $this->hasMany(LicenseRevocation::class);
+    }
+
+    public function pendingRevocations(): HasMany
+    {
+        return $this->revocations()
+            ->where('status', LicenseRevocation::STATUS_PENDING)
+            ->latest('requested_at');
     }
 
     public static function durationOptions(): array
@@ -234,6 +258,8 @@ class License extends Model
             'lastSeenAt' => $this->last_seen_at?->toIso8601String(),
             'activatedAt' => $this->activated_at?->toIso8601String(),
             'appVersion' => $this->app_version,
+            'clientAccountId' => $this->client_account_id,
+            'clientAccountName' => $this->relationLoaded('clientAccount') ? $this->clientAccount?->name : null,
             'canRenew' => $this->canReceiveRenewal(),
             'isConsumedForRenewal' => $this->isConsumedForRenewal(),
             'consumedAt' => $this->consumed_at?->toIso8601String(),
@@ -284,6 +310,7 @@ class License extends Model
             'metadata' => [
                 'device_secret' => $this->device_secret,
                 'deviceSecret' => $this->device_secret,
+                'client_account_id' => $this->client_account_id,
             ],
         ];
     }

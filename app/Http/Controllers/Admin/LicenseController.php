@@ -64,6 +64,7 @@ class LicenseController extends Controller
                 'Device ID',
                 'Machine ID',
                 'Device Name',
+                'Client Account',
                 'Provision Status',
                 'License Status',
                 'Renewal State',
@@ -84,6 +85,7 @@ class LicenseController extends Controller
                     $license->resolvedDeviceId() ?: 'Not linked yet',
                     $license->machine_id ?: 'Not set',
                     $deviceName,
+                    $license->clientAccount?->name ?: 'Unclaimed',
                     $license->provisionStatus(),
                     $license->status()->value,
                     $license->isConsumedForRenewal() ? 'Consumed for renewal' : ($license->canReceiveRenewal() ? 'Accepting renewal codes' : 'Not applicable'),
@@ -211,6 +213,7 @@ class LicenseController extends Controller
         return License::query()->with([
             'consumedFor:id,code',
             'renewalCodes:id,code,consumed_by_license_id',
+            'clientAccount:id,name',
         ]);
     }
 }

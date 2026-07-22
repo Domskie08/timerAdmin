@@ -20,7 +20,10 @@
             <Link href="/support" class="ghost-button">Support</Link>
             {#if auth?.user?.is_admin}
                 <Link href="/admin" class="primary-button">Open Admin</Link>
+            {:else if auth?.user?.client_account_id}
+                <Link href="/client" class="primary-button">Client Portal</Link>
             {:else}
+                <Link href="/client/login" class="ghost-button">Client Login</Link>
                 <Link href="/admin/login" class="primary-button">Admin Login</Link>
             {/if}
         </nav>
