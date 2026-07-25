@@ -9,6 +9,7 @@
     export let account = {};
     export let stats = {};
     export let machines = [];
+    export let pcTimers = [];
     export let recentSales = [];
 
     const formatMoney = (amountMinor) =>
@@ -44,8 +45,8 @@
     </section>
 
     <section class="stats-grid">
-        <StatCard label="Machines" value={stats.machines ?? 0} hint={`${stats.onlineMachines ?? 0} online now`} accent="aqua" />
-        <StatCard label="Licenses" value={stats.linkedLicenses ?? 0} hint="Linked DTimer WiFi licenses" accent="mint" />
+        <StatCard label="DTimer WiFi" value={stats.machines ?? 0} hint={`${stats.onlineMachines ?? 0} online now`} accent="aqua" />
+        <StatCard label="PC Timer" value={stats.pcTimers ?? 0} hint={`${stats.onlinePcTimers ?? 0} online now`} accent="mint" />
         <StatCard label="Today Sales" value={formatMoney(stats.todaySalesAmountMinor ?? 0)} hint={`${stats.todaySalesCount ?? 0} coin sale event${(stats.todaySalesCount ?? 0) === 1 ? '' : 's'}`} accent="orange" />
         <StatCard label="All Sales" value={formatMoney(stats.totalSalesAmountMinor ?? 0)} hint={`Heartbeat window ${stats.activeWindowMinutes ?? 10} minutes`} accent="rose" />
     </section>
@@ -86,7 +87,7 @@
                                     </td>
                                     <td>
                                         <strong class="mono">{machine.licenseKey || 'Not linked'}</strong>
-                                        <span class="muted">{machine.expiresAt ? `Expires ${formatDate(machine.expiresAt)}` : 'No active expiry'}</span>
+                                        <span class="muted">{machine.expiresAt ? `Expires ${formatDate(machine.expiresAt)}` : 'Lifetime'}</span>
                                     </td>
                                     <td>{machine.lastSeenAt ? formatDate(machine.lastSeenAt, true) : 'Not seen yet'}</td>
                                 </tr>
@@ -95,6 +96,55 @@
                             <tr>
                                 <td colspan="5">
                                     <div class="empty-state">No DTimer WiFi machines have linked to this account.</div>
+                                </td>
+                            </tr>
+                        {/if}
+                    </tbody>
+                </table>
+            </div>
+        </article>
+
+        <article class="table-shell">
+            <div class="section-heading">
+                <h2>PC Timer Devices</h2>
+                <a href="/client/pc-timer" class="secondary-button">Open PC Timer</a>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Device</th>
+                            <th>Status</th>
+                            <th>License</th>
+                            <th>App</th>
+                            <th>Last seen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {#if pcTimers.length}
+                            {#each pcTimers as timer}
+                                <tr>
+                                    <td>
+                                        <strong>{timer.deviceName || 'Not activated yet'}</strong>
+                                        <span class="muted mono">{timer.deviceId || 'No device ID'}</span>
+                                    </td>
+                                    <td>
+                                        <TablePill status={timer.status} />
+                                        <div class="muted">{timer.provisionStatus}</div>
+                                    </td>
+                                    <td>
+                                        <strong class="mono">{timer.licenseKey}</strong>
+                                        <span class="muted">{timer.expiresAt ? `Expires ${formatDate(timer.expiresAt)}` : 'Starts after activation'}</span>
+                                    </td>
+                                    <td>{timer.appVersion || 'Not reported'}</td>
+                                    <td>{timer.lastSeenAt ? formatDate(timer.lastSeenAt, true) : 'Not seen yet'}</td>
+                                </tr>
+                            {/each}
+                        {:else}
+                            <tr>
+                                <td colspan="5">
+                                    <div class="empty-state">No PC Timer licenses have been claimed by this account.</div>
                                 </td>
                             </tr>
                         {/if}

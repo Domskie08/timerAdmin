@@ -51,6 +51,7 @@ class ClientDtimerWifiTest extends TestCase
         $this->actingAs($client)
             ->post('/client/licenses/claim', [
                 'license_key' => $license->code,
+                'product_type' => License::TYPE_PISO_WIFI,
             ])
             ->assertRedirect(route('client.licensing'))
             ->assertSessionHas('success');
@@ -84,6 +85,39 @@ class ClientDtimerWifiTest extends TestCase
         ]);
     }
 
+    public function test_client_can_claim_pc_timer_and_dtimer_wifi_licenses_under_one_account(): void
+    {
+        $client = $this->createClientUser();
+        $pcLicense = License::query()->create([
+            'code' => '111111111111',
+            'product_type' => License::TYPE_PC_TIMER,
+            'duration' => '1_month',
+            'expires_at' => now()->addMonth()->toDateString(),
+        ]);
+        $dtimerLicense = $this->createLicense([
+            'code' => '222222222222',
+        ]);
+
+        $this->actingAs($client)
+            ->post('/client/licenses/claim', [
+                'license_key' => $pcLicense->code,
+                'product_type' => License::TYPE_PC_TIMER,
+            ])
+            ->assertRedirect(route('client.licensing'))
+            ->assertSessionHas('success');
+
+        $this->actingAs($client)
+            ->post('/client/licenses/claim', [
+                'license_key' => $dtimerLicense->code,
+                'product_type' => License::TYPE_PISO_WIFI,
+            ])
+            ->assertRedirect(route('client.licensing'))
+            ->assertSessionHas('success');
+
+        $this->assertSame($client->client_account_id, $pcLicense->fresh()->client_account_id);
+        $this->assertSame($client->client_account_id, $dtimerLicense->fresh()->client_account_id);
+    }
+
     public function test_same_mac_can_relink_after_sd_card_changes_device_id(): void
     {
         $client = $this->createClientUser();
@@ -104,6 +138,28 @@ class ClientDtimerWifiTest extends TestCase
         $this->linkMachine($license, 'different-hardware', 'AA:BB:CC:44:55:66')
             ->assertStatus(409)
             ->assertJsonPath('status', 'license_in_use');
+    }
+
+    public function test_dtimer_wifi_license_is_lifetime_after_linking(): void
+    {
+        $client = $this->createClientUser();
+        $license = $this->createLicense([
+            'code' => '123456789012',
+            'client_account_id' => $client->client_account_id,
+            'duration' => '1_month',
+            'expires_at' => now()->subDay()->toDateString(),
+        ]);
+
+        $this->assertNull($license->fresh()->duration);
+        $this->assertNull($license->fresh()->expires_at);
+
+        $this->linkMachine($license, 'orange-pi-original', 'AA:BB:CC:11:22:33')
+            ->assertOk()
+            ->assertJsonPath('license.is_lifetime', true)
+            ->assertJsonPath('license.expires_at', null)
+            ->assertJsonPath('license.status', 'active');
+
+        $this->assertNull($license->fresh()->expires_at);
     }
 
     public function test_coin_sales_batch_is_idempotent_per_machine(): void

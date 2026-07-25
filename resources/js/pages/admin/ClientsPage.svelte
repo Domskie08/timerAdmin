@@ -36,16 +36,16 @@
 <AdminLayout {flash} {csrfToken} {appName}>
     <section class="stats-grid">
         <StatCard label="Client Accounts" value={stats.clientAccounts ?? 0} hint="Registered client admins" accent="aqua" />
-        <StatCard label="DTimer Machines" value={stats.dtimerMachines ?? 0} hint="Linked and historical machines" accent="mint" />
-        <StatCard label="Pending Revocations" value={stats.pendingRevocations ?? 0} hint="30-day unlink requests" accent="orange" />
-        <StatCard label="Coin Sales" value={formatMoney(stats.totalSalesAmountMinor ?? 0)} hint="All client accounts" accent="rose" />
+        <StatCard label="PC Timer" value={stats.pcTimers ?? 0} hint="Claimed PC Timer licenses" accent="mint" />
+        <StatCard label="DTimer Machines" value={stats.dtimerMachines ?? 0} hint="Linked and historical machines" accent="orange" />
+        <StatCard label="Coin Sales" value={formatMoney(stats.totalSalesAmountMinor ?? 0)} hint={`${stats.pendingRevocations ?? 0} pending revocation${(stats.pendingRevocations ?? 0) === 1 ? '' : 's'}`} accent="rose" />
     </section>
 
     <article class="table-shell">
         <div class="section-heading">
             <div>
                 <h2>Client Accounts</h2>
-                <p class="card-subtitle">Client admins, DTimer WiFi machines, sales, and revocation status.</p>
+                <p class="card-subtitle">Client admins, PC Timer devices, DTimer WiFi machines, sales, and revocation status.</p>
             </div>
             <a href="/admin" class="secondary-button">License Dashboard</a>
         </div>
@@ -56,7 +56,7 @@
                     <tr>
                         <th>Client</th>
                         <th>Admins</th>
-                        <th>Machines</th>
+                        <th>Devices</th>
                         <th>Licenses</th>
                         <th>Sales</th>
                         <th>Revocations</th>
@@ -77,13 +77,18 @@
                                     {/each}
                                 </td>
                                 <td>
-                                    <strong>{client.machineCount} machine{client.machineCount === 1 ? '' : 's'}</strong>
-                                    <span class="muted">{client.onlineMachineCount} online</span>
+                                    <strong>{client.pcTimerLicenseCount} PC Timer</strong>
+                                    <span class="muted">{client.machineCount} DTimer machine{client.machineCount === 1 ? '' : 's'}</span>
+                                    <span class="muted">{client.onlineMachineCount} DTimer online</span>
                                     {#each client.machines.slice(0, 3) as machine}
                                         <span class="muted">{machine.deviceName || 'DTimer machine'} · {machine.licenseKey || 'No license'}</span>
                                     {/each}
                                 </td>
-                                <td>{client.licenseCount}</td>
+                                <td>
+                                    <strong>{client.licenseCount}</strong>
+                                    <span class="muted">{client.pcTimerLicenseCount} PC Timer</span>
+                                    <span class="muted">{client.dtimerWifiLicenseCount} DTimer WiFi</span>
+                                </td>
                                 <td>
                                     <strong>{formatMoney(client.salesAmountMinor)}</strong>
                                     <span class="muted">{client.salesCount} event{client.salesCount === 1 ? '' : 's'}</span>

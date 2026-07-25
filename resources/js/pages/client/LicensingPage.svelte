@@ -32,23 +32,41 @@
             <div class="section-heading">
                 <div>
                     <h2>Claim License</h2>
-                    <p class="card-subtitle">Add a purchased license key to this client account.</p>
+                    <p class="card-subtitle">Add purchased PC Timer and DTimer WiFi license keys to this client account.</p>
                 </div>
             </div>
 
-            <form method="POST" action="/client/licenses/claim">
-                <input type="hidden" name="_token" value={csrfToken} />
+            <div class="form-grid">
+                <form method="POST" action="/client/licenses/claim">
+                    <input type="hidden" name="_token" value={csrfToken} />
+                    <input type="hidden" name="product_type" value="pc_timer" />
 
-                <div class="field">
-                    <label for="license_key">License key</label>
-                    <input id="license_key" type="text" name="license_key" inputmode="numeric" maxlength="12" required />
-                    {#if errors?.license_key}
-                        <div class="field-error">{errors.license_key}</div>
-                    {/if}
-                </div>
+                    <div class="field">
+                        <label for="pc_license_key">PC Timer license key</label>
+                        <input id="pc_license_key" type="text" name="license_key" inputmode="numeric" maxlength="12" required />
+                        {#if errors?.license_key}
+                            <div class="field-error">{errors.license_key}</div>
+                        {/if}
+                    </div>
 
-                <button type="submit" class="primary-button">Claim License</button>
-            </form>
+                    <button type="submit" class="primary-button">Claim PC Timer</button>
+                </form>
+
+                <form method="POST" action="/client/licenses/claim">
+                    <input type="hidden" name="_token" value={csrfToken} />
+                    <input type="hidden" name="product_type" value="piso_wifi" />
+
+                    <div class="field">
+                        <label for="dtimer_license_key">DTimer WiFi license key</label>
+                        <input id="dtimer_license_key" type="text" name="license_key" inputmode="numeric" maxlength="12" required />
+                        {#if errors?.license_key}
+                            <div class="field-error">{errors.license_key}</div>
+                        {/if}
+                    </div>
+
+                    <button type="submit" class="secondary-button">Claim DTimer WiFi</button>
+                </form>
+            </div>
         </article>
 
         <article class="panel">
@@ -84,9 +102,10 @@
             <table class="license-registry-table">
                 <thead>
                     <tr>
+                        <th>Type</th>
                         <th>License</th>
                         <th>Status</th>
-                        <th>Machine</th>
+                        <th>Device</th>
                         <th>Revocation</th>
                         <th class="action-column">Actions</th>
                     </tr>
@@ -96,6 +115,9 @@
                         {#each licenses as license}
                             <tr>
                                 <td>
+                                    <TablePill status={license.productTypeLabel} />
+                                </td>
+                                <td>
                                     <strong class="mono">{license.licenseKey}</strong>
                                     <span class="muted">{license.durationLabel}</span>
                                     <span class="muted secret-value">{license.deviceSecret}</span>
@@ -103,20 +125,26 @@
                                 <td>
                                     <TablePill status={license.status} />
                                     <div class="muted">{license.provisionStatus}</div>
-                                    <div class="muted">{license.expiryDate ? `Expires ${formatDate(license.expiryDate)}` : 'Starts after machine link'}</div>
+                                    <div class="muted">{license.isLifetime ? 'Lifetime' : license.expiryDate ? `Expires ${formatDate(license.expiryDate)}` : 'Starts after activation'}</div>
                                 </td>
                                 <td>
-                                    {#if license.machine}
+                                    {#if license.productType === 'piso_wifi' && license.machine}
                                         <strong>{license.machine.deviceName || 'DTimer machine'}</strong>
                                         <span class="muted mono">{license.machine.macAddress}</span>
                                         <span class="muted">{license.machine.lastSeenAt ? `Last seen ${formatDate(license.machine.lastSeenAt, true)}` : 'Not seen yet'}</span>
+                                    {:else if license.productType === 'pc_timer'}
+                                        <strong>{license.deviceName || 'Not activated yet'}</strong>
+                                        <span class="muted mono">{license.deviceId || 'No device ID'}</span>
+                                        <span class="muted">{license.lastSeenAt ? `Last seen ${formatDate(license.lastSeenAt, true)}` : 'Not seen yet'}</span>
                                     {:else}
                                         <strong>Not linked yet</strong>
                                         <span class="muted">Waiting for Orange Pi machine link</span>
                                     {/if}
                                 </td>
                                 <td>
-                                    {#if license.pendingRevocation}
+                                    {#if license.productType === 'pc_timer'}
+                                        <span class="muted">Not available for PC Timer</span>
+                                    {:else if license.pendingRevocation}
                                         <TablePill status="Pending" />
                                         <span class="muted">Requested {formatDate(license.pendingRevocation.requestedAt, true)}</span>
                                         <span class="muted">Unlinks {formatDate(license.pendingRevocation.effectiveAt, true)}</span>
@@ -125,7 +153,7 @@
                                     {/if}
                                 </td>
                                 <td class="action-column">
-                                    {#if license.machine && !license.pendingRevocation}
+                                    {#if license.productType === 'piso_wifi' && license.machine && !license.pendingRevocation}
                                         <form method="POST" action={`/client/licenses/${license.id}/revocations`} class="inline-action-form renew-license-form">
                                             <input type="hidden" name="_token" value={csrfToken} />
                                             <input class="renew-license-input" type="text" name="reason" placeholder="Reason" maxlength="255" />
@@ -134,8 +162,10 @@
                                             {/if}
                                             <button type="submit" class="danger-button">Request Revocation</button>
                                         </form>
-                                    {:else if license.pendingRevocation}
+                                    {:else if license.productType === 'piso_wifi' && license.pendingRevocation}
                                         <span class="muted">Waiting for 30-day unlink</span>
+                                    {:else if license.productType === 'pc_timer'}
+                                        <span class="muted">No revocation flow</span>
                                     {:else}
                                         <span class="muted">No machine to revoke</span>
                                     {/if}
@@ -144,7 +174,7 @@
                         {/each}
                     {:else}
                         <tr>
-                            <td colspan="5">
+                            <td colspan="6">
                                 <div class="empty-state">No licenses have been claimed by this account.</div>
                             </td>
                         </tr>

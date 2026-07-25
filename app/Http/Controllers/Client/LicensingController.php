@@ -10,6 +10,7 @@ use App\Services\LicenseRevocationProcessor;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -27,7 +28,6 @@ class LicensingController extends Controller
 
         $licenses = License::query()
             ->where('client_account_id', $account->id)
-            ->where('product_type', License::TYPE_PISO_WIFI)
             ->with([
                 'dtimerMachine',
                 'pendingRevocations',
@@ -40,13 +40,19 @@ class LicensingController extends Controller
                 ->map(fn (License $license): array => [
                     'id' => $license->id,
                     'licenseKey' => $license->code,
+                    'productType' => $license->resolvedProductType(),
+                    'productTypeLabel' => $license->productTypeLabel(),
                     'deviceSecret' => $license->device_secret,
-                    'durationLabel' => License::durationLabel($license->resolvedDuration()),
+                    'durationLabel' => $license->resolvedDurationLabel(),
+                    'isLifetime' => $license->isLifetimeLicense(),
                     'status' => $license->status()->value,
                     'provisionStatus' => $license->provisionStatus(),
                     'expiryDate' => $license->effectiveExpiryDate()?->toDateString(),
                     'activatedAt' => $license->activated_at?->toIso8601String(),
                     'lastSeenAt' => $license->last_seen_at?->toIso8601String(),
+                    'deviceId' => $license->resolvedDeviceId(),
+                    'deviceName' => $license->device_name,
+                    'appVersion' => $license->app_version,
                     'machine' => $license->dtimerMachine?->toApiArray(),
                     'pendingRevocation' => $license->pendingRevocations->first()?->toClientArray(),
                 ])
@@ -61,6 +67,7 @@ class LicensingController extends Controller
     {
         $validated = $request->validate([
             'license_key' => ['required', 'digits:12', 'exists:licenses,code'],
+            'product_type' => ['required', 'string', Rule::in([License::TYPE_PC_TIMER, License::TYPE_PISO_WIFI])],
         ]);
 
         $account = $request->user()->clientAccount()->firstOrFail();
@@ -77,9 +84,9 @@ class LicensingController extends Controller
                 ]);
             }
 
-            if (! $license->isPisoWifiLicense()) {
+            if ($license->resolvedProductType() !== $validated['product_type']) {
                 throw ValidationException::withMessages([
-                    'license_key' => 'Only PisoWiFi / DTimer WiFi licenses can be claimed in the client admin portal.',
+                    'license_key' => 'This license key does not match the selected product type.',
                 ]);
             }
 
@@ -119,6 +126,12 @@ class LicensingController extends Controller
                 ->firstOrFail();
 
             abort_unless((int) $lockedLicense->client_account_id === (int) $account->id, 404);
+
+            if (! $lockedLicense->isPisoWifiLicense()) {
+                throw ValidationException::withMessages([
+                    'reason' => 'Only DTimer WiFi machines can be revoked from the client portal.',
+                ]);
+            }
 
             $pendingExists = LicenseRevocation::query()
                 ->where('license_id', $lockedLicense->id)

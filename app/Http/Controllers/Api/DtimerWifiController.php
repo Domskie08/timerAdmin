@@ -138,6 +138,7 @@ class DtimerWifiController extends Controller
                     [
                         'client_account_id' => $machine->client_account_id,
                         'license_id' => $license->id,
+                        'product_type' => License::TYPE_PISO_WIFI,
                         'occurred_at' => CarbonImmutable::parse($event['occurred_at']),
                         'received_at' => now(),
                         'amount_minor' => (int) $event['amount_minor'],
@@ -230,10 +231,6 @@ class DtimerWifiController extends Controller
             return $this->errorResponse('inactive', 'This license code has already been consumed for renewal.', 409, $license);
         }
 
-        if ($license->isExpired()) {
-            return $this->errorResponse('expired', 'This license has expired.', 422, $license);
-        }
-
         if ($requireLinkedMachine && ! $license->resolvedDeviceId()) {
             return $this->errorResponse('machine_not_linked', 'This license has no linked DTimer machine.', 409, $license);
         }
@@ -309,7 +306,7 @@ class DtimerWifiController extends Controller
 
         if ($activateIfNeeded && ! $license->isActivated()) {
             $license->activated_at = now();
-            $license->expires_at = License::expiryDateForDuration($license->resolvedDuration(), $license->activated_at);
+            $license->expires_at = null;
         }
 
         $license->last_seen_at = now();

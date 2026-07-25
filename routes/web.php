@@ -13,6 +13,7 @@ use App\Http\Controllers\Client\AuthController as ClientAuthController;
 use App\Http\Controllers\Client\DashboardController as ClientDashboardController;
 use App\Http\Controllers\Client\DtimerWifiController as ClientDtimerWifiController;
 use App\Http\Controllers\Client\LicensingController as ClientLicensingController;
+use App\Http\Controllers\Client\PcTimerController as ClientPcTimerController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\SupportController;
 use Illuminate\Support\Facades\Route;
@@ -64,6 +65,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
 Route::middleware(['auth', 'client'])->prefix('client')->name('client.')->group(function (): void {
     Route::get('/', [ClientDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/pc-timer', [ClientPcTimerController::class, 'index'])->name('pc-timer');
     Route::get('/dtimer-wifi', [ClientDtimerWifiController::class, 'index'])->name('dtimer-wifi');
     Route::get('/licensing', [ClientLicensingController::class, 'index'])->name('licensing');
     Route::post('/licenses/claim', [ClientLicensingController::class, 'claim'])->name('licenses.claim');

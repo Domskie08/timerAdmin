@@ -3,19 +3,19 @@
 namespace App\Http\Requests\Api;
 
 use App\Http\Requests\Api\Concerns\NormalizesCoinSaleEvents;
-use App\Http\Requests\Api\Concerns\NormalizesDtimerWifiInput;
-use App\Support\DtimerDeviceIdentity;
+use App\Http\Requests\Api\Concerns\NormalizesLicenseDeviceInput;
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreCoinSalesBatchRequest extends FormRequest
+class StorePcTimerCoinSalesBatchRequest extends FormRequest
 {
     use NormalizesCoinSaleEvents;
-    use NormalizesDtimerWifiInput;
+    use NormalizesLicenseDeviceInput;
 
     protected function prepareForValidation(): void
     {
         $this->merge([
-            ...$this->normalizeDtimerWifiInput(),
+            ...$this->normalizeLicenseDeviceInput(),
+            'device_secret' => $this->firstFilledInput(['device_secret', 'deviceSecret', 'secret_key', 'secretKey']),
             ...$this->normalizeCoinSaleEvents(),
         ]);
     }
@@ -31,7 +31,8 @@ class StoreCoinSalesBatchRequest extends FormRequest
             'license_key' => ['required', 'digits:12', 'exists:licenses,code'],
             'device_secret' => ['required', 'string', 'size:64'],
             'device_id' => ['required', 'string', 'max:255'],
-            'mac_address' => ['required', 'string', 'max:32', $this->macAddressRule()],
+            'device_name' => ['nullable', 'string', 'max:255'],
+            'app_version' => ['nullable', 'string', 'max:50'],
             'events' => ['required', 'array', 'min:1', 'max:500'],
             'events.*.local_event_id' => ['required', 'string', 'max:100'],
             'events.*.occurred_at' => ['required', 'date'],
@@ -42,16 +43,5 @@ class StoreCoinSalesBatchRequest extends FormRequest
             'events.*.user_slot' => ['nullable', 'string', 'max:255'],
             'events.*.metadata' => ['nullable', 'array'],
         ];
-    }
-
-    private function macAddressRule(): callable
-    {
-        return function (string $attribute, mixed $value, callable $fail): void {
-            try {
-                DtimerDeviceIdentity::normalizeMacAddress((string) $value);
-            } catch (\InvalidArgumentException) {
-                $fail('Enter a valid MAC address.');
-            }
-        };
     }
 }

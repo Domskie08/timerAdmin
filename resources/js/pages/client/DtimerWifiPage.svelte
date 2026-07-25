@@ -94,7 +94,7 @@
                                     {#if machine.pendingRevocation}
                                         <span class="muted">Unlinks {formatDate(machine.pendingRevocation.effectiveAt, true)}</span>
                                     {:else}
-                                        <span class="muted">{machine.expiresAt ? `Expires ${formatDate(machine.expiresAt)}` : 'No active expiry'}</span>
+                                        <span class="muted">{machine.expiresAt ? `Expires ${formatDate(machine.expiresAt)}` : 'Lifetime'}</span>
                                     {/if}
                                 </td>
                                 <td>

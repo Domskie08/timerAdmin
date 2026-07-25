@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\ActivateLicenseRequest;
 use App\Http\Requests\Api\HeartbeatRequest;
 use App\Http\Requests\Api\StatusLicenseRequest;
+use App\Http\Requests\Api\StorePcTimerCoinSalesBatchRequest;
 use App\Models\AppUpdate;
+use App\Models\CoinSaleEvent;
 use App\Models\License;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -121,6 +124,84 @@ class TimerAppController extends Controller
         return $this->successResponse($license, 'Heartbeat received.');
     }
 
+    public function storeCoinSales(StorePcTimerCoinSalesBatchRequest $request): JsonResponse
+    {
+        return DB::transaction(function () use ($request): JsonResponse {
+            $license = $this->resolveLicenseForUpdate($request->string('license_key')->toString());
+            $deviceId = $request->string('device_id')->toString();
+
+            if (! hash_equals((string) $license->device_secret, $request->string('device_secret')->toString())) {
+                return $this->errorResponse($license, 'Device secret does not match this license.', 401, 'unauthorized');
+            }
+
+            if (! $license->isPcTimerLicense()) {
+                return $this->errorResponse($license, 'Use a PC TimerApp license for TimerApp coin sales.', 409, 'wrong_license_type');
+            }
+
+            if (! $license->client_account_id) {
+                return $this->errorResponse($license, 'Claim this license from the client admin portal before sending PC Timer coin sales.', 409, 'unclaimed');
+            }
+
+            if ($license->isConsumedForRenewal()) {
+                return $this->errorResponse($license, 'This license code has already been consumed for renewal.', 409, 'inactive');
+            }
+
+            if ($license->isFrozen()) {
+                return $this->errorResponse($license, 'Activate this PC Timer license before sending coin sales.', 409, 'inactive');
+            }
+
+            if (! $this->licenseMatchesCurrentDevice($license, $deviceId)) {
+                return $this->errorResponse($license, 'This device is not linked to the supplied license.', 409, 'inactive');
+            }
+
+            if ($license->isExpired()) {
+                return $this->errorResponse($license, 'Please buy license to activate some feature.', 422, 'expired');
+            }
+
+            $license = $this->syncObservedDeviceMetadata($license, $request, true);
+            $accepted = 0;
+            $duplicates = 0;
+
+            foreach ($request->validated('events') as $event) {
+                $sale = CoinSaleEvent::query()->firstOrCreate(
+                    [
+                        'license_id' => $license->id,
+                        'local_event_id' => $event['local_event_id'],
+                    ],
+                    [
+                        'client_account_id' => $license->client_account_id,
+                        'dtimer_machine_id' => null,
+                        'product_type' => License::TYPE_PC_TIMER,
+                        'occurred_at' => CarbonImmutable::parse($event['occurred_at']),
+                        'received_at' => now(),
+                        'amount_minor' => (int) $event['amount_minor'],
+                        'currency' => strtoupper((string) ($event['currency'] ?? 'PHP')),
+                        'pulse_count' => (int) ($event['pulse_count'] ?? 0),
+                        'session_id' => $event['session_id'] ?? null,
+                        'user_slot' => $event['user_slot'] ?? null,
+                        'metadata' => $event['metadata'] ?? null,
+                    ]
+                );
+
+                if ($sale->wasRecentlyCreated) {
+                    $accepted++;
+                } else {
+                    $duplicates++;
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'status' => $license->toApiArray()['status'],
+                'message' => 'PC Timer coin sales batch received.',
+                'license' => $license->toApiArray(),
+                'accepted' => $accepted,
+                'duplicates' => $duplicates,
+                'rejected' => 0,
+            ]);
+        });
+    }
+
     public function status(StatusLicenseRequest $request): JsonResponse
     {
         $deviceId = $request->string('device_id')->toString();
@@ -223,6 +304,7 @@ class TimerAppController extends Controller
         }
 
         return License::query()
+            ->where('product_type', License::TYPE_PC_TIMER)
             ->where('device_id', $deviceId)
             ->first();
     }
@@ -256,11 +338,6 @@ class TimerAppController extends Controller
             $license->device_name = $deviceName;
         }
 
-        $machineId = $request->string('machine_id')->toString();
-        if ($machineId !== '') {
-            $license->machine_id = $machineId;
-        }
-
         $appVersion = $request->string('app_version')->toString();
         if ($appVersion !== '') {
             $license->app_version = $appVersion;
@@ -284,8 +361,6 @@ class TimerAppController extends Controller
             'message' => $message,
             'device_id' => $license?->resolvedDeviceId(),
             'deviceId' => $license?->resolvedDeviceId(),
-            'machine_id' => $license?->machine_id,
-            'machineId' => $license?->machine_id,
             'device_secret' => $license?->device_secret,
             'deviceSecret' => $license?->device_secret,
             'license' => $license?->toApiArray(),
@@ -300,8 +375,6 @@ class TimerAppController extends Controller
             'message' => $message,
             'device_id' => $license?->resolvedDeviceId(),
             'deviceId' => $license?->resolvedDeviceId(),
-            'machine_id' => $license?->machine_id,
-            'machineId' => $license?->machine_id,
             'device_secret' => $license?->device_secret,
             'deviceSecret' => $license?->device_secret,
             'license' => $license?->toApiArray(),

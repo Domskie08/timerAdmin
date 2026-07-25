@@ -888,6 +888,10 @@ td strong {
     gap: 12px;
 }
 
+.license-lifetime-grid {
+    margin-bottom: 14px;
+}
+
 .admin-main {
     display: grid;
     gap: 20px;

@@ -193,27 +193,15 @@
                 <form method="POST" action="/admin/licenses/pisowifi">
                     <input type="hidden" name="_token" value={csrfToken} />
 
-                    <div class="field">
-                        <span>License term</span>
-                        <div class="duration-picker">
-                            {#each licenseDurations as option}
-                                <label class="duration-option">
-                                    <input
-                                        type="radio"
-                                        name="duration"
-                                        value={option.value}
-                                        checked={option.value === (formState?.licenseDuration || defaultLicenseDuration)}
-                                        required
-                                    />
-                                    <span>{option.label}</span>
-                                </label>
-                            {/each}
+                    <div class="metric-grid license-lifetime-grid">
+                        <div class="metric">
+                            <strong>Lifetime</strong>
+                            <span>No expiration date for DTimer WiFi devices</span>
                         </div>
-                        <div class="field-help">Use this for DTimer WiFi/PisoWiFi machines that report coin sales.</div>
-                        <div class="field-help">Client admins can claim only PisoWiFi licenses from their licensing page.</div>
-                        {#if errors?.duration}
-                            <div class="field-error">{errors.duration}</div>
-                        {/if}
+                        <div class="metric">
+                            <strong>Revocable</strong>
+                            <span>Client revocation and admin delete stay available</span>
+                        </div>
                     </div>
 
                     <button type="submit" class="primary-button">Add PisoWiFi License</button>
@@ -277,11 +265,11 @@
                                                 {/each}
                                             {/if}
                                         </td>
-                                        <td>{license.expiryDate ? formatDate(license.expiryDate) : 'Starts after activation'}</td>
+                                        <td>{license.isLifetime ? 'Lifetime' : license.expiryDate ? formatDate(license.expiryDate) : 'Starts after activation'}</td>
                                         <td>
                                             <strong class="mono">{license.deviceId || 'Not linked yet'}</strong>
                                             <span class="muted">{license.deviceName}</span>
-                                            {#if license.machineId && license.machineId !== license.deviceId}
+                                            {#if license.productType !== 'pc_timer' && license.machineId && license.machineId !== license.deviceId}
                                                 <span class="muted">Machine ID {license.machineId}</span>
                                             {/if}
                                             {#if license.isConsumedForRenewal && license.consumedForLicenseKey}

@@ -6,9 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\RenewLicenseRequest;
 use App\Http\Requests\Admin\StoreLicenseRequest;
 use App\Models\License;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class LicenseController extends Controller
@@ -25,15 +26,17 @@ class LicenseController extends Controller
         return $this->storeTyped($request, License::TYPE_PC_TIMER);
     }
 
-    public function storePisoWifi(StoreLicenseRequest $request): RedirectResponse
+    public function storePisoWifi(Request $request): RedirectResponse
     {
         return $this->storeTyped($request, License::TYPE_PISO_WIFI);
     }
 
-    private function storeTyped(StoreLicenseRequest $request, string $productType): RedirectResponse
+    private function storeTyped(Request $request, string $productType): RedirectResponse
     {
         $createdAt = now();
-        $duration = $request->string('duration')->toString();
+        $duration = $productType === License::TYPE_PC_TIMER
+            ? $request->string('duration')->toString()
+            : null;
         $productLabel = License::productTypeLabelFor($productType);
 
         for ($attempt = 0; $attempt < self::MAX_CODE_GENERATION_ATTEMPTS; $attempt++) {
@@ -41,7 +44,7 @@ class LicenseController extends Controller
                 'code' => $this->generateUniqueCode(),
                 'product_type' => $productType,
                 'duration' => $duration,
-                'expires_at' => License::expiryDateForDuration($duration, $createdAt),
+                'expires_at' => $duration ? License::expiryDateForDuration($duration, $createdAt) : null,
                 'created_by' => $request->user()?->id,
             ]);
             $license->created_at = $createdAt;
@@ -49,9 +52,13 @@ class LicenseController extends Controller
             try {
                 $license->save();
 
+                $message = $duration
+                    ? "{$productLabel} license {$license->code} created successfully for ".License::durationLabel($duration).'. Expiry will start when the device activates.'
+                    : "{$productLabel} lifetime license {$license->code} created successfully.";
+
                 return redirect()
                     ->route('admin.dashboard')
-                    ->with('success', "{$productLabel} license {$license->code} created successfully for ".License::durationLabel($duration).'. Expiry will start when the device activates.');
+                    ->with('success', $message);
             } catch (QueryException $exception) {
                 if (! $this->isDuplicateCodeException($exception)) {
                     throw $exception;
@@ -99,8 +106,8 @@ class LicenseController extends Controller
                     $license->productTypeLabel(),
                     $license->device_secret,
                     $license->created_at?->format('Y-m-d H:i:s'),
-                    License::durationLabel($license->resolvedDuration()),
-                    $expiryDate,
+                    $license->resolvedDurationLabel(),
+                    $license->isLifetimeLicense() ? 'Lifetime' : $expiryDate,
                     $license->resolvedDeviceId() ?: 'Not linked yet',
                     $license->machine_id ?: 'Not set',
                     $deviceName,
@@ -129,7 +136,7 @@ class LicenseController extends Controller
 
             if (! $targetLicense->canReceiveRenewal()) {
                 return $this->renewalErrorRedirect(
-                    'Only a bound DTimer device license with a real device binding can be renewed.',
+                    'Only a bound PC Timer license with a real device binding can be renewed.',
                     $request
                 );
             }
@@ -161,6 +168,10 @@ class LicenseController extends Controller
             }
 
             $renewalDuration = $renewalLicense->resolvedDuration();
+            if (! $renewalDuration) {
+                return $this->renewalErrorRedirect('Renewal license must be a PC Timer license with a license term.', $request);
+            }
+
             $targetLicense->expires_at = License::expiryDateForDuration(
                 $renewalDuration,
                 $this->renewalBaseDate($targetLicense)

@@ -20,7 +20,7 @@ class DtimerWifiController extends Controller
 
         $machines = DtimerMachine::query()
             ->where('client_account_id', $account->id)
-            ->with('license:id,code,duration,expires_at,activated_at,device_secret')
+            ->with('license:id,code,product_type,duration,expires_at,activated_at,device_secret')
             ->latest()
             ->get();
 
@@ -85,7 +85,10 @@ class DtimerWifiController extends Controller
             'stats' => [
                 'totalMachines' => $machines->count(),
                 'onlineMachines' => $machines->filter(fn (DtimerMachine $machine): bool => $machine->isOnline())->count(),
-                'totalSalesAmountMinor' => (int) CoinSaleEvent::query()->where('client_account_id', $account->id)->sum('amount_minor'),
+                'totalSalesAmountMinor' => (int) CoinSaleEvent::query()
+                    ->where('client_account_id', $account->id)
+                    ->whereIn('dtimer_machine_id', $machineIds)
+                    ->sum('amount_minor'),
                 'activeSessions' => $machines->sum('active_sessions'),
                 'connectedUsers' => $machines->sum('connected_users'),
                 'activeWindowMinutes' => config('timer.active_window_minutes'),

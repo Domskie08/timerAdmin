@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\ClientAccount;
+use App\Models\CoinSaleEvent;
 use App\Models\License;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -19,12 +21,10 @@ class LicenseDeviceBindingTest extends TestCase
             'license_key' => $license->code,
             'device_name' => 'OFFICE-PC-01',
             'device_id' => 'device-original',
-            'machine_id' => 'machine-original',
         ])
             ->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('license.device_id', 'device-original')
-            ->assertJsonPath('license.machine_id', 'machine-original')
             ->assertJsonPath('device_secret', $license->fresh()->device_secret)
             ->assertJsonPath('license.device_secret', $license->fresh()->device_secret);
 
@@ -32,7 +32,6 @@ class LicenseDeviceBindingTest extends TestCase
             'license_key' => $license->code,
             'device_name' => 'OFFICE-PC-01',
             'device_id' => 'device-other',
-            'machine_id' => 'machine-other',
         ])
             ->assertStatus(409)
             ->assertJsonPath('success', false)
@@ -42,7 +41,7 @@ class LicenseDeviceBindingTest extends TestCase
             'code' => $license->code,
             'device_name' => 'OFFICE-PC-01',
             'device_id' => 'device-original',
-            'machine_id' => 'machine-original',
+            'machine_id' => null,
         ]);
     }
 
@@ -58,7 +57,6 @@ class LicenseDeviceBindingTest extends TestCase
                 'license_key' => $license->code,
                 'device_name' => 'OFFICE-PC-01',
                 'device_id' => 'device-original',
-                'machine_id' => 'machine-original',
             ])
                 ->assertOk()
                 ->assertJsonPath('success', true)
@@ -82,26 +80,23 @@ class LicenseDeviceBindingTest extends TestCase
             'license_key' => $license->code,
             'device_name' => 'OFFICE-PC-01',
             'device_id' => 'device-original',
-            'machine_id' => 'machine-original',
         ])->assertOk();
 
         $this->postJson('/api/v1/licenses/status', [
             'license_key' => $license->code,
             'device_name' => 'OFFICE-PC-01',
             'device_id' => 'device-other',
-            'machine_id' => 'machine-other',
         ])
             ->assertStatus(409)
             ->assertJsonPath('success', false)
             ->assertJsonPath('message', 'This device is not linked to the supplied license.');
     }
 
-    public function test_status_accepts_same_device_id_with_different_machine_id(): void
+    public function test_status_ignores_machine_id_for_pc_timer_license(): void
     {
         $license = $this->createLicense([
             'device_id' => 'device-original',
             'device_name' => 'OFFICE-PC-01',
-            'machine_id' => 'machine-original',
             'activated_at' => now(),
         ]);
 
@@ -114,9 +109,10 @@ class LicenseDeviceBindingTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('status', 'active')
             ->assertJsonPath('license.device_id', 'device-original')
-            ->assertJsonPath('license.machine_id', 'machine-other');
+            ->assertJsonMissingPath('license.machine_id')
+            ->assertJsonMissingPath('license.machineId');
 
-        $this->assertSame('machine-other', $license->fresh()->machine_id);
+        $this->assertNull($license->fresh()->machine_id);
     }
 
     public function test_status_can_resolve_license_by_device_id_without_license_key(): void
@@ -124,7 +120,6 @@ class LicenseDeviceBindingTest extends TestCase
         $license = $this->createLicense([
             'device_id' => 'device-original',
             'device_name' => 'OFFICE-PC-01',
-            'machine_id' => 'machine-original',
             'activated_at' => now(),
         ]);
 
@@ -136,7 +131,8 @@ class LicenseDeviceBindingTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('status', 'active')
             ->assertJsonPath('license.device_id', 'device-original')
-            ->assertJsonPath('license.machine_id', 'machine-original')
+            ->assertJsonMissingPath('license.machine_id')
+            ->assertJsonMissingPath('license.machineId')
             ->assertJsonPath('license.license_key', $license->code);
 
         $this->assertDatabaseHas('licenses', [
@@ -177,7 +173,6 @@ class LicenseDeviceBindingTest extends TestCase
         $license = $this->createLicense([
             'device_id' => 'device-original',
             'device_name' => 'OFFICE-PC-01',
-            'machine_id' => 'machine-original',
             'activated_at' => now(),
         ]);
 
@@ -190,7 +185,8 @@ class LicenseDeviceBindingTest extends TestCase
             ->assertJsonPath('status', 'active')
             ->assertJsonPath('message', 'Heartbeat received.')
             ->assertJsonPath('license.device_id', 'device-original')
-            ->assertJsonPath('license.machine_id', 'machine-original');
+            ->assertJsonMissingPath('license.machine_id')
+            ->assertJsonMissingPath('license.machineId');
 
         $this->assertNotNull($license->fresh()->last_seen_at);
     }
@@ -200,7 +196,6 @@ class LicenseDeviceBindingTest extends TestCase
         $license = $this->createLicense([
             'device_id' => 'device-original',
             'device_name' => 'OFFICE-PC-01',
-            'machine_id' => 'machine-original',
         ]);
 
         $this->postJson('/api/v1/licenses/heartbeat', [
@@ -219,8 +214,67 @@ class LicenseDeviceBindingTest extends TestCase
         $this->assertNull($freshLicense->activated_at);
         $this->assertSame('device-original', $freshLicense->device_id);
         $this->assertSame('OFFICE-PC-01', $freshLicense->device_name);
-        $this->assertSame('machine-original', $freshLicense->machine_id);
+        $this->assertNull($freshLicense->machine_id);
         $this->assertNull($freshLicense->last_seen_at);
+    }
+
+    public function test_pc_timer_coin_sales_batch_is_idempotent_per_license_device(): void
+    {
+        $account = ClientAccount::query()->create([
+            'name' => 'Arcade Client',
+            'contact_email' => 'client@example.com',
+        ]);
+        $license = $this->createLicense([
+            'client_account_id' => $account->id,
+        ]);
+
+        $this->postJson('/api/v1/licenses/activate', [
+            'license_key' => $license->code,
+            'device_name' => 'Counter Timer 01',
+            'device_id' => 'coin-device-001',
+        ])->assertOk();
+
+        $payload = [
+            'license_key' => $license->code,
+            'device_secret' => $license->fresh()->device_secret,
+            'device_id' => 'coin-device-001',
+            'device_name' => 'Counter Timer 01',
+            'events' => [
+                [
+                    'local_event_id' => 'pc-coin-001',
+                    'occurred_at' => '2026-07-22 10:00:00',
+                    'amount_minor' => 500,
+                    'currency' => 'PHP',
+                    'pulse_count' => 5,
+                ],
+                [
+                    'local_event_id' => 'pc-coin-002',
+                    'occurred_at' => '2026-07-22 10:05:00',
+                    'amount_minor' => 1000,
+                    'currency' => 'PHP',
+                    'pulse_count' => 10,
+                ],
+            ],
+        ];
+
+        $this->postJson('/api/v1/licenses/coin-sales/batch', $payload)
+            ->assertOk()
+            ->assertJsonPath('accepted', 2)
+            ->assertJsonPath('duplicates', 0);
+
+        $this->postJson('/api/v1/licenses/coin-sales/batch', $payload)
+            ->assertOk()
+            ->assertJsonPath('accepted', 0)
+            ->assertJsonPath('duplicates', 2);
+
+        $this->assertSame(2, CoinSaleEvent::query()->count());
+        $this->assertSame(1500, (int) CoinSaleEvent::query()->sum('amount_minor'));
+        $this->assertDatabaseHas('coin_sale_events', [
+            'license_id' => $license->id,
+            'dtimer_machine_id' => null,
+            'product_type' => License::TYPE_PC_TIMER,
+            'local_event_id' => 'pc-coin-001',
+        ]);
     }
 
     public function test_consumed_renewal_license_cannot_be_activated(): void
@@ -229,7 +283,6 @@ class LicenseDeviceBindingTest extends TestCase
             'code' => '123456789012',
             'device_id' => 'device-original',
             'device_name' => 'OFFICE-PC-01',
-            'machine_id' => 'machine-original',
             'activated_at' => now(),
         ]);
 
@@ -267,7 +320,6 @@ class LicenseDeviceBindingTest extends TestCase
         $license = $this->createLicense([
             'device_id' => 'device-original',
             'device_name' => 'OFFICE-PC-01',
-            'machine_id' => 'machine-original',
             'activated_at' => now(),
             'expires_at' => now()->subDay()->toDateString(),
         ]);
@@ -276,7 +328,6 @@ class LicenseDeviceBindingTest extends TestCase
             'license_key' => $license->code,
             'device_name' => 'OFFICE-PC-01',
             'device_id' => 'device-original',
-            'machine_id' => 'machine-original',
         ])
             ->assertStatus(422)
             ->assertJsonPath('success', false)

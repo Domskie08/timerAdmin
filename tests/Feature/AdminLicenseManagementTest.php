@@ -43,6 +43,29 @@ class AdminLicenseManagementTest extends TestCase
             ->assertSeeText($license->device_secret);
     }
 
+    public function test_admin_can_create_lifetime_dtimer_wifi_license_without_duration(): void
+    {
+        $admin = User::query()->create([
+            'name' => 'Admin User',
+            'email' => 'admin@example.com',
+            'password' => 'secret-password',
+            'is_admin' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->post('/admin/licenses/pisowifi')
+            ->assertRedirect(route('admin.dashboard'))
+            ->assertSessionHas('success');
+
+        $license = License::query()->latest('id')->first();
+
+        $this->assertNotNull($license);
+        $this->assertSame(License::TYPE_PISO_WIFI, $license->product_type);
+        $this->assertNull($license->duration);
+        $this->assertNull($license->expires_at);
+        $this->assertTrue($license->isLifetimeLicense());
+    }
+
     public function test_admin_can_delete_license_from_dashboard(): void
     {
         $admin = User::query()->create([
@@ -274,6 +297,40 @@ class AdminLicenseManagementTest extends TestCase
             'code' => '999999999999',
             'duration' => '3_months',
             'expires_at' => '2026-08-10',
+        ]);
+
+        $this->actingAs($admin)
+            ->post("/admin/licenses/{$targetLicense->id}/renew", [
+                'renew_license_code' => $renewalLicense->code,
+                'target_license_id' => $targetLicense->id,
+            ])
+            ->assertRedirect(route('admin.dashboard'))
+            ->assertSessionHasErrors('renew_license_code');
+
+        $this->assertNull($renewalLicense->fresh()->consumed_by_license_id);
+        $this->assertNull($renewalLicense->fresh()->consumed_at);
+    }
+
+    public function test_admin_cannot_renew_lifetime_dtimer_wifi_license(): void
+    {
+        $admin = User::query()->create([
+            'name' => 'Admin User',
+            'email' => 'admin@example.com',
+            'password' => 'secret-password',
+            'is_admin' => true,
+        ]);
+
+        $targetLicense = License::query()->create([
+            'code' => '123456789012',
+            'product_type' => License::TYPE_PISO_WIFI,
+            'device_id' => 'dtimer-device-001',
+            'device_name' => 'DTIMER-01',
+            'activated_at' => now(),
+        ]);
+
+        $renewalLicense = License::query()->create([
+            'code' => '999999999999',
+            'product_type' => License::TYPE_PISO_WIFI,
         ]);
 
         $this->actingAs($admin)

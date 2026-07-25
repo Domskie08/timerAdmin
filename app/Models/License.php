@@ -58,6 +58,15 @@ class License extends Model
                 $license->device_secret = self::generateDeviceSecret();
             }
         });
+
+        static::saving(function (License $license): void {
+            if ($license->resolvedProductType() === self::TYPE_PISO_WIFI) {
+                $license->duration = null;
+                $license->expires_at = null;
+            } else {
+                $license->machine_id = null;
+            }
+        });
     }
 
     public function creator(): BelongsTo
@@ -171,8 +180,12 @@ class License extends Model
         return $secret;
     }
 
-    public function resolvedDuration(): string
+    public function resolvedDuration(): ?string
     {
+        if ($this->isPisoWifiLicense()) {
+            return null;
+        }
+
         if (is_string($this->duration) && $this->duration !== '') {
             return $this->duration;
         }
@@ -198,6 +211,23 @@ class License extends Model
     public function isPcTimerLicense(): bool
     {
         return $this->resolvedProductType() === self::TYPE_PC_TIMER;
+    }
+
+    public function usesExpiration(): bool
+    {
+        return $this->isPcTimerLicense();
+    }
+
+    public function isLifetimeLicense(): bool
+    {
+        return ! $this->usesExpiration();
+    }
+
+    public function resolvedDurationLabel(): string
+    {
+        $duration = $this->resolvedDuration();
+
+        return $duration ? self::durationLabel($duration) : 'Lifetime';
     }
 
     public function isActivated(): bool
@@ -232,7 +262,7 @@ class License extends Model
 
     public function effectiveExpiryDate(): ?CarbonInterface
     {
-        if (! $this->isActivated()) {
+        if (! $this->usesExpiration() || ! $this->isActivated()) {
             return null;
         }
 
@@ -241,7 +271,7 @@ class License extends Model
 
     public function isExpired(): bool
     {
-        if (! $this->isActivated()) {
+        if (! $this->usesExpiration() || ! $this->isActivated()) {
             return false;
         }
 
@@ -263,7 +293,7 @@ class License extends Model
 
     public function canReceiveRenewal(): bool
     {
-        return $this->hasBoundDevice() && ! $this->isConsumedForRenewal();
+        return $this->isPcTimerLicense() && $this->hasBoundDevice() && ! $this->isConsumedForRenewal();
     }
 
     public function status(): LicenseStatus
@@ -292,7 +322,8 @@ class License extends Model
             'productTypeLabel' => $this->productTypeLabel(),
             'deviceSecret' => $this->device_secret,
             'duration' => $this->resolvedDuration(),
-            'durationLabel' => self::durationLabel($this->resolvedDuration()),
+            'durationLabel' => $this->resolvedDurationLabel(),
+            'isLifetime' => $this->isLifetimeLicense(),
             'creationDate' => $this->created_at?->toIso8601String(),
             'expiryDate' => $expiryDate?->toDateString(),
             'deviceId' => $this->resolvedDeviceId(),
@@ -313,7 +344,7 @@ class License extends Model
             'renewalHistory' => $this->renewalCodes
                 ->map(fn (License $renewal): array => [
                     'licenseKey' => $renewal->code,
-                    'durationLabel' => self::durationLabel($renewal->resolvedDuration()),
+                    'durationLabel' => $renewal->resolvedDurationLabel(),
                     'consumedAt' => $renewal->consumed_at?->toIso8601String(),
                 ])
                 ->values()
@@ -326,7 +357,7 @@ class License extends Model
         $licenseStatus = strtolower($this->status()->value);
         $expiryDate = $this->effectiveExpiryDate();
 
-        return [
+        $data = [
             'id' => $this->id,
             'license_key' => $this->code,
             'licenseKey' => $this->code,
@@ -336,8 +367,6 @@ class License extends Model
             'productTypeLabel' => $this->productTypeLabel(),
             'device_id' => $this->resolvedDeviceId(),
             'deviceId' => $this->resolvedDeviceId(),
-            'machine_id' => $this->machine_id,
-            'machineId' => $this->machine_id,
             'device_secret' => $this->device_secret,
             'deviceSecret' => $this->device_secret,
             'secret_key' => $this->device_secret,
@@ -347,6 +376,10 @@ class License extends Model
             'expires_at' => $expiryDate?->toDateString(),
             'expiresAt' => $expiryDate?->toDateString(),
             'duration' => $this->resolvedDuration(),
+            'duration_label' => $this->resolvedDurationLabel(),
+            'durationLabel' => $this->resolvedDurationLabel(),
+            'is_lifetime' => $this->isLifetimeLicense(),
+            'isLifetime' => $this->isLifetimeLicense(),
             'provision_status' => $this->isProvisioned() ? 'provisioned' : 'not_provisioned',
             'provisionStatus' => $this->provisionStatus(),
             'license_status' => $licenseStatus,
@@ -363,5 +396,12 @@ class License extends Model
                 'client_account_id' => $this->client_account_id,
             ],
         ];
+
+        if (! $this->isPcTimerLicense()) {
+            $data['machine_id'] = $this->machine_id;
+            $data['machineId'] = $this->machine_id;
+        }
+
+        return $data;
     }
 }

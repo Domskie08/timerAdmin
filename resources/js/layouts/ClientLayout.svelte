@@ -12,15 +12,16 @@
 <div class="page-shell">
     <header class="admin-header">
         <div class="brand-lockup">
-            <div class="brand-mark">DW</div>
+            <div class="brand-mark">TD</div>
             <div>
-                <h1 class="brand-title">DTimer WiFi</h1>
-                <p class="brand-copy">Client admin console for {appName}.</p>
+                <h1 class="brand-title">Timer Devices</h1>
+                <p class="brand-copy">Client device console for {appName}.</p>
             </div>
         </div>
 
         <div class="header-actions">
             <Link href="/client" class={navClass('dashboard')}>Overview</Link>
+            <Link href="/client/pc-timer" class={navClass('pc-timer')}>PC Timer</Link>
             <Link href="/client/dtimer-wifi" class={navClass('dtimer-wifi')}>DTimer WiFi</Link>
             <Link href="/client/licensing" class={navClass('licensing')}>Licensing</Link>
             <form method="POST" action="/logout">

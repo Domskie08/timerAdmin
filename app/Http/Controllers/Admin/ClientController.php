@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ClientAccount;
 use App\Models\CoinSaleEvent;
 use App\Models\DtimerMachine;
+use App\Models\License;
 use App\Models\LicenseRevocation;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -18,8 +19,8 @@ class ClientController extends Controller
         $accounts = ClientAccount::query()
             ->with([
                 'users:id,name,email,client_account_id',
-                'licenses:id,code,client_account_id,device_id,device_name,activated_at,expires_at,duration',
-                'dtimerMachines.license:id,code,expires_at,activated_at,duration',
+                'licenses:id,code,product_type,client_account_id,device_id,device_name,activated_at,expires_at,duration',
+                'dtimerMachines.license:id,code,product_type,expires_at,activated_at,duration',
                 'licenseRevocations' => fn ($query) => $query->latest('requested_at'),
             ])
             ->latest()
@@ -34,6 +35,7 @@ class ClientController extends Controller
         return Inertia::render('admin/ClientsPage', [
             'stats' => [
                 'clientAccounts' => $accounts->count(),
+                'pcTimers' => License::query()->where('product_type', License::TYPE_PC_TIMER)->whereNotNull('client_account_id')->count(),
                 'dtimerMachines' => DtimerMachine::query()->count(),
                 'pendingRevocations' => LicenseRevocation::query()->where('status', LicenseRevocation::STATUS_PENDING)->count(),
                 'totalSalesAmountMinor' => (int) CoinSaleEvent::query()->sum('amount_minor'),
@@ -54,6 +56,8 @@ class ClientController extends Controller
                             ])
                             ->values(),
                         'licenseCount' => $account->licenses->count(),
+                        'pcTimerLicenseCount' => $account->licenses->where('product_type', License::TYPE_PC_TIMER)->count(),
+                        'dtimerWifiLicenseCount' => $account->licenses->where('product_type', License::TYPE_PISO_WIFI)->count(),
                         'machineCount' => $account->dtimerMachines->count(),
                         'onlineMachineCount' => $account->dtimerMachines->filter(fn (DtimerMachine $machine): bool => $machine->isOnline())->count(),
                         'pendingRevocationCount' => $account->licenseRevocations->where('status', LicenseRevocation::STATUS_PENDING)->count(),

@@ -14,6 +14,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::post('/licenses/heartbeat', [TimerAppController::class, 'heartbeat'])
         ->name('licenses.heartbeat');
 
+    Route::post('/licenses/coin-sales/batch', [TimerAppController::class, 'storeCoinSales'])
+        ->name('licenses.coin-sales.batch');
+
     Route::post('/dtimer/machines/link', [DtimerWifiController::class, 'link'])
         ->name('dtimer.machines.link');
 
