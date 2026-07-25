@@ -14,6 +14,7 @@ use App\Http\Controllers\Client\DashboardController as ClientDashboardController
 use App\Http\Controllers\Client\DtimerWifiController as ClientDtimerWifiController;
 use App\Http\Controllers\Client\LicensingController as ClientLicensingController;
 use App\Http\Controllers\Client\PcTimerController as ClientPcTimerController;
+use App\Http\Controllers\Client\SettingsController as ClientSettingsController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\SupportController;
 use Illuminate\Support\Facades\Route;
@@ -30,8 +31,7 @@ Route::middleware('guest')->group(function (): void {
     Route::get('/admin/login', [LoginController::class, 'create'])->name('login');
     Route::post('/admin/login', [LoginController::class, 'store'])->name('login.store');
 
-    Route::get('/client/login', [ClientAuthController::class, 'createLogin'])->name('client.login');
-    Route::post('/client/login', [ClientAuthController::class, 'storeLogin'])->name('client.login.store');
+    Route::redirect('/client/login', '/admin/login')->name('client.login');
     Route::get('/client/register', [ClientAuthController::class, 'createRegister'])->name('client.register');
     Route::post('/client/register', [ClientAuthController::class, 'storeRegister'])->name('client.register.store');
 });
@@ -47,6 +47,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/licenses/pc', [LicenseController::class, 'storePc'])->name('licenses.pc.store');
     Route::post('/licenses/pisowifi', [LicenseController::class, 'storePisoWifi'])->name('licenses.pisowifi.store');
     Route::get('/licenses/export', [LicenseController::class, 'export'])->name('licenses.export');
+    Route::get('/licenses/pc/export', [LicenseController::class, 'exportPc'])->name('licenses.pc.export');
+    Route::get('/licenses/dtimer-wifi/export', [LicenseController::class, 'exportDtimerWifi'])->name('licenses.dtimer-wifi.export');
     Route::post('/licenses/{license}/renew', [LicenseController::class, 'renew'])
         ->whereNumber('license')
         ->name('licenses.renew');
@@ -68,6 +70,8 @@ Route::middleware(['auth', 'client'])->prefix('client')->name('client.')->group(
     Route::get('/pc-timer', [ClientPcTimerController::class, 'index'])->name('pc-timer');
     Route::get('/dtimer-wifi', [ClientDtimerWifiController::class, 'index'])->name('dtimer-wifi');
     Route::get('/licensing', [ClientLicensingController::class, 'index'])->name('licensing');
+    Route::get('/settings', [ClientSettingsController::class, 'index'])->name('settings');
+    Route::put('/settings/password', [ClientSettingsController::class, 'updatePassword'])->name('settings.password.update');
     Route::post('/licenses/claim', [ClientLicensingController::class, 'claim'])->name('licenses.claim');
     Route::post('/licenses/{license}/revocations', [ClientLicensingController::class, 'requestRevocation'])
         ->whereNumber('license')

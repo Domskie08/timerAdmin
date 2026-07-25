@@ -115,14 +115,14 @@ class License extends Model
     {
         return [
             ['value' => self::TYPE_PC_TIMER, 'label' => 'PC TimerApp'],
-            ['value' => self::TYPE_PISO_WIFI, 'label' => 'PisoWiFi / DTimer WiFi'],
+            ['value' => self::TYPE_PISO_WIFI, 'label' => 'DTimer WiFi'],
         ];
     }
 
     public static function productTypeLabelFor(?string $productType): string
     {
         return match ($productType ?: self::TYPE_PC_TIMER) {
-            self::TYPE_PISO_WIFI => 'PisoWiFi / DTimer WiFi',
+            self::TYPE_PISO_WIFI => 'DTimer WiFi',
             default => 'PC TimerApp',
         };
     }

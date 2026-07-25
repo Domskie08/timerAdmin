@@ -33,23 +33,29 @@ class LoginController extends Controller
             'password' => $credentials['password'],
         ], $request->boolean('remember'))) {
             throw ValidationException::withMessages([
-                'email' => 'The provided credentials do not match an admin account.',
+                'email' => 'The provided credentials do not match an admin or client account.',
             ]);
         }
 
         $request->session()->regenerate();
 
-        if (! $request->user()?->is_admin) {
-            Auth::logout();
-
-            throw ValidationException::withMessages([
-                'email' => 'This login is restricted to admin users.',
-            ]);
+        if ($request->user()?->is_admin) {
+            return redirect()
+                ->route('admin.dashboard')
+                ->with('success', 'Welcome back. The license console is ready.');
         }
 
-        return redirect()
-            ->intended(route('admin.dashboard'))
-            ->with('success', 'Welcome back. The license console is ready.');
+        if ($request->user()?->client_account_id) {
+            return redirect()
+                ->route('client.dashboard')
+                ->with('success', 'Welcome back. Your client device console is ready.');
+        }
+
+        Auth::logout();
+
+        throw ValidationException::withMessages([
+            'email' => 'This login is restricted to admin and client admin accounts.',
+        ]);
     }
 
     public function destroy(Request $request): RedirectResponse

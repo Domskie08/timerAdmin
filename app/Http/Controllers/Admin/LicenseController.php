@@ -73,13 +73,35 @@ class LicenseController extends Controller
 
     public function export(): StreamedResponse
     {
-        $fileName = 'licenses-'.now()->format('Ymd-His').'.csv';
-        $licenses = $this->licenseExportQuery()->latest()->get();
+        return $this->exportTyped(null, 'licenses');
+    }
 
-        return response()->streamDownload(function () use ($licenses): void {
+    public function exportPc(): StreamedResponse
+    {
+        return $this->exportTyped(License::TYPE_PC_TIMER, 'pc-timer-licenses');
+    }
+
+    public function exportDtimerWifi(): StreamedResponse
+    {
+        return $this->exportTyped(License::TYPE_PISO_WIFI, 'dtimer-wifi-licenses');
+    }
+
+    private function exportTyped(?string $productType, string $baseFileName): StreamedResponse
+    {
+        $fileName = $baseFileName.'-'.now()->format('Ymd-His').'.csv';
+        $query = $this->licenseExportQuery();
+
+        if ($productType) {
+            $query->where('product_type', $productType);
+        }
+
+        $licenses = $query->latest()->get();
+
+        return response()->streamDownload(function () use ($licenses, $productType): void {
             $handle = fopen('php://output', 'wb');
+            $includeMachineId = $productType !== License::TYPE_PC_TIMER;
 
-            fputcsv($handle, [
+            $headers = [
                 'License key',
                 'License type',
                 'Device secret',
@@ -87,7 +109,6 @@ class LicenseController extends Controller
                 'License term',
                 'Expiry date',
                 'Device ID',
-                'Machine ID',
                 'Device Name',
                 'Client Account',
                 'Provision Status',
@@ -95,13 +116,19 @@ class LicenseController extends Controller
                 'Renewal State',
                 'Consumed For License',
                 'Renewed By Codes',
-            ]);
+            ];
+
+            if ($includeMachineId) {
+                array_splice($headers, 7, 0, ['Machine ID']);
+            }
+
+            fputcsv($handle, $headers);
 
             foreach ($licenses as $license) {
                 $deviceName = $license->device_name ?: 'Not linked yet';
                 $expiryDate = $license->effectiveExpiryDate()?->format('Y-m-d') ?? 'Starts after activation';
 
-                fputcsv($handle, [
+                $row = [
                     $license->code,
                     $license->productTypeLabel(),
                     $license->device_secret,
@@ -109,7 +136,6 @@ class LicenseController extends Controller
                     $license->resolvedDurationLabel(),
                     $license->isLifetimeLicense() ? 'Lifetime' : $expiryDate,
                     $license->resolvedDeviceId() ?: 'Not linked yet',
-                    $license->machine_id ?: 'Not set',
                     $deviceName,
                     $license->clientAccount?->name ?: 'Unclaimed',
                     $license->provisionStatus(),
@@ -117,7 +143,13 @@ class LicenseController extends Controller
                     $license->isConsumedForRenewal() ? 'Consumed for renewal' : ($license->canReceiveRenewal() ? 'Accepting renewal codes' : 'Not applicable'),
                     $license->consumedFor?->code ?: 'Not consumed',
                     $license->renewalCodes->pluck('code')->join(', ') ?: 'None',
-                ]);
+                ];
+
+                if ($includeMachineId) {
+                    array_splice($row, 7, 0, [$license->machine_id ?: 'Not set']);
+                }
+
+                fputcsv($handle, $row);
             }
 
             fclose($handle);

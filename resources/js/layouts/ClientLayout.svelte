@@ -24,6 +24,7 @@
             <Link href="/client/pc-timer" class={navClass('pc-timer')}>PC Timer</Link>
             <Link href="/client/dtimer-wifi" class={navClass('dtimer-wifi')}>DTimer WiFi</Link>
             <Link href="/client/licensing" class={navClass('licensing')}>Licensing</Link>
+            <Link href="/client/settings" class={navClass('settings')}>Settings</Link>
             <form method="POST" action="/logout">
                 <input type="hidden" name="_token" value={csrfToken} />
                 <button type="submit" class="secondary-button">Logout</button>

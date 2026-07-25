@@ -10,6 +10,7 @@ use App\Models\LicenseRevocation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class ClientDtimerWifiTest extends TestCase
@@ -41,6 +42,54 @@ class ClientDtimerWifiTest extends TestCase
         $this->actingAs($admin)
             ->get('/client/dtimer-wifi')
             ->assertForbidden();
+    }
+
+    public function test_admin_login_page_accepts_admin_and_client_admin_accounts(): void
+    {
+        $client = $this->createClientUser();
+        $admin = User::query()->create([
+            'name' => 'Super Admin',
+            'email' => 'admin@example.com',
+            'password' => 'secret-password',
+            'is_admin' => true,
+        ]);
+
+        $this->post('/admin/login', [
+            'email' => $admin->email,
+            'password' => 'secret-password',
+        ])
+            ->assertRedirect(route('admin.dashboard'));
+
+        $this->post('/logout');
+
+        $this->post('/admin/login', [
+            'email' => $client->email,
+            'password' => 'secret-password',
+        ])
+            ->assertRedirect(route('client.dashboard'));
+
+        $this->get('/client/login')
+            ->assertRedirect('/admin/login');
+    }
+
+    public function test_client_admin_can_change_password_from_settings(): void
+    {
+        $client = $this->createClientUser();
+
+        $this->actingAs($client)
+            ->get('/client/settings')
+            ->assertOk();
+
+        $this->actingAs($client)
+            ->put('/client/settings/password', [
+                'current_password' => 'secret-password',
+                'password' => 'new-secret-password',
+                'password_confirmation' => 'new-secret-password',
+            ])
+            ->assertRedirect(route('client.settings'))
+            ->assertSessionHas('success');
+
+        $this->assertTrue(Hash::check('new-secret-password', $client->fresh()->password));
     }
 
     public function test_client_can_claim_license_and_link_dtimer_machine_by_mac_address(): void

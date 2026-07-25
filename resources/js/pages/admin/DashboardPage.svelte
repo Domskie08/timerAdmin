@@ -124,7 +124,7 @@
         Number(formState?.renewTargetLicenseId ?? 0) === license.id ? formState?.renewLicenseCode ?? '' : '';
 
     const pcLicenses = licenses.filter((license) => license.productType === 'pc_timer');
-    const pisoWifiLicenses = licenses.filter((license) => license.productType === 'piso_wifi');
+    const dtimerWifiLicenses = licenses.filter((license) => license.productType === 'piso_wifi');
 
 </script>
 
@@ -136,7 +136,7 @@
     <section class="stats-grid">
         <StatCard label="Total Licenses" value={stats.totalLicenses ?? 0} hint="Every generated activation key." accent="aqua" />
         <StatCard label="PC TimerApp" value={stats.pcLicenses ?? 0} hint="Desktop timer licenses." accent="mint" />
-        <StatCard label="PisoWiFi" value={stats.pisoWifiLicenses ?? 0} hint="DTimer WiFi / Orange Pi licenses." accent="orange" />
+        <StatCard label="DTimer WiFi" value={stats.pisoWifiLicenses ?? 0} hint="Orange Pi device licenses." accent="orange" />
         <StatCard label="Active Devices" value={stats.activeDevices ?? 0} hint={`Heartbeat inside ${stats.activeWindowMinutes ?? 10} minutes. ${stats.expiredLicenses ?? 0} expired license${(stats.expiredLicenses ?? 0) === 1 ? '' : 's'} in the system.`} accent="rose" />
     </section>
 
@@ -184,10 +184,13 @@
             <article class="panel">
                 <div class="section-heading">
                     <div>
-                        <h2>Create PisoWiFi License</h2>
+                        <h2>Create DTimer WiFi License</h2>
                         <p class="card-subtitle">Generate a DTimer WiFi license for Orange Pi machines and client admins.</p>
                     </div>
-                    <a href="/admin/licenses/export" class="secondary-button">Export CSV</a>
+                    <div class="form-actions">
+                        <a href="/admin/licenses/pc/export" class="secondary-button">Export PC DTimer App</a>
+                        <a href="/admin/licenses/dtimer-wifi/export" class="secondary-button">Export DTimer WiFi</a>
+                    </div>
                 </div>
 
                 <form method="POST" action="/admin/licenses/pisowifi">
@@ -204,7 +207,7 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="primary-button">Add PisoWiFi License</button>
+                    <button type="submit" class="primary-button">Add DTimer WiFi License</button>
                 </form>
             </article>
             </section>
@@ -215,7 +218,7 @@
                         <h2>License Registry</h2>
                         <p class="card-subtitle">Track frozen vs active licenses, provisioned devices, and the real expiry date that begins only after activation.</p>
                     </div>
-                    <span class="chip">{pcLicenses.length} PC · {pisoWifiLicenses.length} PisoWiFi</span>
+                    <span class="chip">{pcLicenses.length} PC / {dtimerWifiLicenses.length} DTimer WiFi</span>
                 </div>
 
                 <div class="table-wrap">

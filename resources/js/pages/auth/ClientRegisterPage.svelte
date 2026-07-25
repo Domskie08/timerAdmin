@@ -61,7 +61,7 @@
 
                 <div class="form-actions">
                     <button type="submit" class="primary-button">Create Client Account</button>
-                    <Link href="/client/login" class="secondary-button">Client Login</Link>
+                    <Link href="/admin/login" class="secondary-button">Admin Login</Link>
                 </div>
             </form>
         </section>

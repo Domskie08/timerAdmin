@@ -1,4 +1,5 @@
 <script>
+    import { Link } from '@inertiajs/svelte';
     import PublicLayout from '@/layouts/PublicLayout.svelte';
 
     export let appName = 'TimerAdmin';
@@ -19,10 +20,10 @@
         {/if}
 
         <section class="panel login-panel">
-            <p class="eyebrow">Admin Access</p>
-            <h2>Sign in to manage licenses and TimerApp updates.</h2>
+            <p class="eyebrow">Admin Login</p>
+            <h2>Sign in to your admin account.</h2>
             <p class="section-copy">
-                Only admin accounts can create new license keys, upload release files, and publish news to the homepage.
+                Super admins open the license console. Client admins open the device portal from the same login.
             </p>
 
             <form method="POST" action="/admin/login">
@@ -46,14 +47,17 @@
 
                 <label class="field-inline">
                     <input type="checkbox" name="remember" value="1" />
-                    <span>Keep this admin session signed in</span>
+                    <span>Keep this session signed in</span>
                 </label>
 
-                <button type="submit" class="primary-button">Enter Dashboard</button>
+                <div class="form-actions">
+                    <button type="submit" class="primary-button">Login</button>
+                    <Link href="/client/register" class="secondary-button">Create Client Account</Link>
+                </div>
             </form>
 
             <p class="footer-note">
-                The seeded admin credentials are documented in the project README so they can be changed during setup.
+                Client admins can create an account first, then use this same login page after registration.
             </p>
         </section>
     </div>

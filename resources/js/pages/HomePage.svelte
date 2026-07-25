@@ -95,7 +95,7 @@
                     {:else if auth?.user?.client_account_id}
                         <Link href="/client" class="primary-button">Client Portal</Link>
                     {:else}
-                        <Link href="/client/login" class="primary-button">Client Login</Link>
+                        <Link href="/admin/login" class="primary-button">Admin Login</Link>
                     {/if}
                     <a href="#news" class="secondary-button">View News</a>
                 </div>
