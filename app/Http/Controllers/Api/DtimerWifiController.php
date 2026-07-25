@@ -222,6 +222,10 @@ class DtimerWifiController extends Controller
             return $this->errorResponse('unclaimed', 'Claim this license from the client admin portal before linking a DTimer WiFi machine.', 409, $license);
         }
 
+        if (! $license->isPisoWifiLicense()) {
+            return $this->errorResponse('wrong_license_type', 'Use a PisoWiFi / DTimer WiFi license for Orange Pi machines.', 409, $license);
+        }
+
         if ($license->isConsumedForRenewal()) {
             return $this->errorResponse('inactive', 'This license code has already been consumed for renewal.', 409, $license);
         }

@@ -17,12 +17,29 @@ class LicenseController extends Controller
 
     public function store(StoreLicenseRequest $request): RedirectResponse
     {
+        return $this->storeTyped($request, License::TYPE_PC_TIMER);
+    }
+
+    public function storePc(StoreLicenseRequest $request): RedirectResponse
+    {
+        return $this->storeTyped($request, License::TYPE_PC_TIMER);
+    }
+
+    public function storePisoWifi(StoreLicenseRequest $request): RedirectResponse
+    {
+        return $this->storeTyped($request, License::TYPE_PISO_WIFI);
+    }
+
+    private function storeTyped(StoreLicenseRequest $request, string $productType): RedirectResponse
+    {
         $createdAt = now();
         $duration = $request->string('duration')->toString();
+        $productLabel = License::productTypeLabelFor($productType);
 
         for ($attempt = 0; $attempt < self::MAX_CODE_GENERATION_ATTEMPTS; $attempt++) {
             $license = new License([
                 'code' => $this->generateUniqueCode(),
+                'product_type' => $productType,
                 'duration' => $duration,
                 'expires_at' => License::expiryDateForDuration($duration, $createdAt),
                 'created_by' => $request->user()?->id,
@@ -34,7 +51,7 @@ class LicenseController extends Controller
 
                 return redirect()
                     ->route('admin.dashboard')
-                    ->with('success', "License {$license->code} created successfully for ".License::durationLabel($duration).'. Expiry will start when an admin activates the device.');
+                    ->with('success', "{$productLabel} license {$license->code} created successfully for ".License::durationLabel($duration).'. Expiry will start when the device activates.');
             } catch (QueryException $exception) {
                 if (! $this->isDuplicateCodeException($exception)) {
                     throw $exception;
@@ -57,6 +74,7 @@ class LicenseController extends Controller
 
             fputcsv($handle, [
                 'License key',
+                'License type',
                 'Device secret',
                 'Creation date',
                 'License term',
@@ -78,6 +96,7 @@ class LicenseController extends Controller
 
                 fputcsv($handle, [
                     $license->code,
+                    $license->productTypeLabel(),
                     $license->device_secret,
                     $license->created_at?->format('Y-m-d H:i:s'),
                     License::durationLabel($license->resolvedDuration()),
@@ -135,6 +154,10 @@ class LicenseController extends Controller
 
             if ($renewalLicense->resolvedDeviceId() || $renewalLicense->isActivated()) {
                 return $this->renewalErrorRedirect('Only a new unused license code can be consumed for renewal.', $request);
+            }
+
+            if ($renewalLicense->resolvedProductType() !== $targetLicense->resolvedProductType()) {
+                return $this->renewalErrorRedirect('Renewal license type must match the target license type.', $request);
             }
 
             $renewalDuration = $renewalLicense->resolvedDuration();

@@ -43,6 +43,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/clients', [ClientController::class, 'index'])->name('clients.index');
     Route::post('/licenses', [LicenseController::class, 'store'])->name('licenses.store');
+    Route::post('/licenses/pc', [LicenseController::class, 'storePc'])->name('licenses.pc.store');
+    Route::post('/licenses/pisowifi', [LicenseController::class, 'storePisoWifi'])->name('licenses.pisowifi.store');
     Route::get('/licenses/export', [LicenseController::class, 'export'])->name('licenses.export');
     Route::post('/licenses/{license}/renew', [LicenseController::class, 'renew'])
         ->whereNumber('license')

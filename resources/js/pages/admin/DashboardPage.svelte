@@ -123,6 +123,9 @@
     const renewalInputValue = (license) =>
         Number(formState?.renewTargetLicenseId ?? 0) === license.id ? formState?.renewLicenseCode ?? '' : '';
 
+    const pcLicenses = licenses.filter((license) => license.productType === 'pc_timer');
+    const pisoWifiLicenses = licenses.filter((license) => license.productType === 'piso_wifi');
+
 </script>
 
 <svelte:head>
@@ -132,23 +135,23 @@
 <AdminLayout {flash} {csrfToken} {appName}>
     <section class="stats-grid">
         <StatCard label="Total Licenses" value={stats.totalLicenses ?? 0} hint="Every generated activation key." accent="aqua" />
-        <StatCard label="Frozen" value={stats.frozenLicenses ?? 0} hint="Expiry has not started yet." accent="orange" />
-        <StatCard label="Provisioned" value={stats.provisionedLicenses ?? 0} hint="Device ID already linked in the registry." accent="mint" />
+        <StatCard label="PC TimerApp" value={stats.pcLicenses ?? 0} hint="Desktop timer licenses." accent="mint" />
+        <StatCard label="PisoWiFi" value={stats.pisoWifiLicenses ?? 0} hint="DTimer WiFi / Orange Pi licenses." accent="orange" />
         <StatCard label="Active Devices" value={stats.activeDevices ?? 0} hint={`Heartbeat inside ${stats.activeWindowMinutes ?? 10} minutes. ${stats.expiredLicenses ?? 0} expired license${(stats.expiredLicenses ?? 0) === 1 ? '' : 's'} in the system.`} accent="rose" />
     </section>
 
     <section class="dashboard-grid">
         <div class="stack">
+            <section class="split-grid">
             <article class="panel">
                 <div class="section-heading">
                     <div>
-                        <h2>Create License Key</h2>
-                        <p class="card-subtitle">Generate a new 12-digit license code and keep it frozen until an admin activates a device from Settings.</p>
+                        <h2>Create PC License</h2>
+                        <p class="card-subtitle">Generate a TimerApp desktop license for PC timer clients.</p>
                     </div>
-                    <a href="/admin/licenses/export" class="secondary-button">Export CSV</a>
                 </div>
 
-                <form method="POST" action="/admin/licenses">
+                <form method="POST" action="/admin/licenses/pc">
                     <input type="hidden" name="_token" value={csrfToken} />
 
                     <div class="field">
@@ -167,16 +170,56 @@
                                 </label>
                             {/each}
                         </div>
-                        <div class="field-help">The selected term is reserved now, but the real expiry date only starts when Settings > License Activation runs successfully in TimerApp.</div>
+                        <div class="field-help">Use this for the regular PC TimerApp license flow.</div>
                         <div class="field-help">Status checks, COM detection, heartbeats, and app startup do not consume license time.</div>
                         {#if errors?.duration}
                             <div class="field-error">{errors.duration}</div>
                         {/if}
                     </div>
 
-                    <button type="submit" class="primary-button">Add License Key</button>
+                    <button type="submit" class="primary-button">Add PC License</button>
                 </form>
             </article>
+
+            <article class="panel">
+                <div class="section-heading">
+                    <div>
+                        <h2>Create PisoWiFi License</h2>
+                        <p class="card-subtitle">Generate a DTimer WiFi license for Orange Pi machines and client admins.</p>
+                    </div>
+                    <a href="/admin/licenses/export" class="secondary-button">Export CSV</a>
+                </div>
+
+                <form method="POST" action="/admin/licenses/pisowifi">
+                    <input type="hidden" name="_token" value={csrfToken} />
+
+                    <div class="field">
+                        <span>License term</span>
+                        <div class="duration-picker">
+                            {#each licenseDurations as option}
+                                <label class="duration-option">
+                                    <input
+                                        type="radio"
+                                        name="duration"
+                                        value={option.value}
+                                        checked={option.value === (formState?.licenseDuration || defaultLicenseDuration)}
+                                        required
+                                    />
+                                    <span>{option.label}</span>
+                                </label>
+                            {/each}
+                        </div>
+                        <div class="field-help">Use this for DTimer WiFi/PisoWiFi machines that report coin sales.</div>
+                        <div class="field-help">Client admins can claim only PisoWiFi licenses from their licensing page.</div>
+                        {#if errors?.duration}
+                            <div class="field-error">{errors.duration}</div>
+                        {/if}
+                    </div>
+
+                    <button type="submit" class="primary-button">Add PisoWiFi License</button>
+                </form>
+            </article>
+            </section>
 
             <article class="table-shell">
                 <div class="section-heading">
@@ -184,7 +227,7 @@
                         <h2>License Registry</h2>
                         <p class="card-subtitle">Track frozen vs active licenses, provisioned devices, and the real expiry date that begins only after activation.</p>
                     </div>
-                    <span class="chip">{licenses.length} listed</span>
+                    <span class="chip">{pcLicenses.length} PC · {pisoWifiLicenses.length} PisoWiFi</span>
                 </div>
 
                 <div class="table-wrap">
@@ -192,6 +235,7 @@
                         <thead>
                             <tr>
                                 <th>License key</th>
+                                <th>Type</th>
                                 <th>Device secret</th>
                                 <th>Term</th>
                                 <th>Expiry date</th>
@@ -211,6 +255,9 @@
                                             {#if license.appVersion}
                                                 <span class="muted">App v{license.appVersion}</span>
                                             {/if}
+                                        </td>
+                                        <td>
+                                            <TablePill status={license.productTypeLabel} />
                                         </td>
                                         <td>
                                             <strong class="mono secret-value">{license.deviceSecret}</strong>
@@ -308,7 +355,7 @@
                                 {/each}
                             {:else}
                                 <tr>
-                                    <td colspan="9">
+                                    <td colspan="10">
                                         <div class="empty-state">No licenses yet. Create the first one using the form above.</div>
                                     </td>
                                 </tr>

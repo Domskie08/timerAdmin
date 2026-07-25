@@ -29,10 +29,14 @@ class DashboardController extends Controller
         $provisionedLicenses = $licenses->filter(fn (License $license): bool => $license->isProvisioned())->count();
         $activeDevices = $licenses->filter(fn (License $license): bool => $license->isCurrentlyActive())->count();
         $expiredLicenses = $licenses->filter(fn (License $license): bool => $license->isExpired())->count();
+        $pcLicenses = $licenses->filter(fn (License $license): bool => $license->resolvedProductType() === License::TYPE_PC_TIMER)->count();
+        $pisoWifiLicenses = $licenses->filter(fn (License $license): bool => $license->isPisoWifiLicense())->count();
 
         return Inertia::render('admin/DashboardPage', [
             'stats' => [
                 'totalLicenses' => $licenses->count(),
+                'pcLicenses' => $pcLicenses,
+                'pisoWifiLicenses' => $pisoWifiLicenses,
                 'frozenLicenses' => $frozenLicenses,
                 'provisionedLicenses' => $provisionedLicenses,
                 'activeDevices' => $activeDevices,

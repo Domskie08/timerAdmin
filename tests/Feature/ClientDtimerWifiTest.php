@@ -218,6 +218,7 @@ class ClientDtimerWifiTest extends TestCase
     {
         return License::query()->create([
             'code' => '123456789012',
+            'product_type' => License::TYPE_PISO_WIFI,
             'duration' => '1_month',
             'expires_at' => now()->addMonth()->toDateString(),
             ...$attributes,

@@ -11,6 +11,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class License extends Model
 {
+    public const TYPE_PC_TIMER = 'pc_timer';
+    public const TYPE_PISO_WIFI = 'piso_wifi';
+
     public const DURATION_OPTIONS = [
         ['value' => '1_month', 'label' => '1 month', 'months' => 1],
         ['value' => '3_months', 'label' => '3 months', 'months' => 3],
@@ -20,6 +23,7 @@ class License extends Model
 
     protected $fillable = [
         'code',
+        'product_type',
         'duration',
         'expires_at',
         'device_name',
@@ -46,6 +50,10 @@ class License extends Model
     protected static function booted(): void
     {
         static::creating(function (License $license): void {
+            if (! is_string($license->product_type) || trim($license->product_type) === '') {
+                $license->product_type = self::TYPE_PC_TIMER;
+            }
+
             if (! is_string($license->device_secret) || trim($license->device_secret) === '') {
                 $license->device_secret = self::generateDeviceSecret();
             }
@@ -92,6 +100,22 @@ class License extends Model
     public static function durationOptions(): array
     {
         return self::DURATION_OPTIONS;
+    }
+
+    public static function productTypeOptions(): array
+    {
+        return [
+            ['value' => self::TYPE_PC_TIMER, 'label' => 'PC TimerApp'],
+            ['value' => self::TYPE_PISO_WIFI, 'label' => 'PisoWiFi / DTimer WiFi'],
+        ];
+    }
+
+    public static function productTypeLabelFor(?string $productType): string
+    {
+        return match ($productType ?: self::TYPE_PC_TIMER) {
+            self::TYPE_PISO_WIFI => 'PisoWiFi / DTimer WiFi',
+            default => 'PC TimerApp',
+        };
     }
 
     public static function defaultDuration(): string
@@ -154,6 +178,26 @@ class License extends Model
         }
 
         return self::inferDurationFromDates($this->created_at, $this->expires_at) ?? self::defaultDuration();
+    }
+
+    public function resolvedProductType(): string
+    {
+        return $this->product_type ?: self::TYPE_PC_TIMER;
+    }
+
+    public function productTypeLabel(): string
+    {
+        return self::productTypeLabelFor($this->resolvedProductType());
+    }
+
+    public function isPisoWifiLicense(): bool
+    {
+        return $this->resolvedProductType() === self::TYPE_PISO_WIFI;
+    }
+
+    public function isPcTimerLicense(): bool
+    {
+        return $this->resolvedProductType() === self::TYPE_PC_TIMER;
     }
 
     public function isActivated(): bool
@@ -244,6 +288,8 @@ class License extends Model
         return [
             'id' => $this->id,
             'licenseKey' => $this->code,
+            'productType' => $this->resolvedProductType(),
+            'productTypeLabel' => $this->productTypeLabel(),
             'deviceSecret' => $this->device_secret,
             'duration' => $this->resolvedDuration(),
             'durationLabel' => self::durationLabel($this->resolvedDuration()),
@@ -284,6 +330,10 @@ class License extends Model
             'id' => $this->id,
             'license_key' => $this->code,
             'licenseKey' => $this->code,
+            'product_type' => $this->resolvedProductType(),
+            'productType' => $this->resolvedProductType(),
+            'product_type_label' => $this->productTypeLabel(),
+            'productTypeLabel' => $this->productTypeLabel(),
             'device_id' => $this->resolvedDeviceId(),
             'deviceId' => $this->resolvedDeviceId(),
             'machine_id' => $this->machine_id,

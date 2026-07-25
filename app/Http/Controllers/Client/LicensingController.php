@@ -27,6 +27,7 @@ class LicensingController extends Controller
 
         $licenses = License::query()
             ->where('client_account_id', $account->id)
+            ->where('product_type', License::TYPE_PISO_WIFI)
             ->with([
                 'dtimerMachine',
                 'pendingRevocations',
@@ -73,6 +74,12 @@ class LicensingController extends Controller
             if ($license->isConsumedForRenewal()) {
                 throw ValidationException::withMessages([
                     'license_key' => 'This license code has already been consumed for renewal.',
+                ]);
+            }
+
+            if (! $license->isPisoWifiLicense()) {
+                throw ValidationException::withMessages([
+                    'license_key' => 'Only PisoWiFi / DTimer WiFi licenses can be claimed in the client admin portal.',
                 ]);
             }
 

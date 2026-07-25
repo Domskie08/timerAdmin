@@ -22,6 +22,10 @@ class TimerAppController extends Controller
         return DB::transaction(function () use ($request): JsonResponse {
             $license = $this->resolveLicenseForUpdate($request->string('license_key')->toString());
 
+            if (! $license->isPcTimerLicense()) {
+                return $this->errorResponse($license, 'Use a PC TimerApp license for TimerApp activation.', 409, 'wrong_license_type');
+            }
+
             if ($license->isExpired()) {
                 return $this->errorResponse($license, 'License has expired.', 422, 'expired');
             }
@@ -81,6 +85,10 @@ class TimerAppController extends Controller
             ], 404);
         }
 
+        if (! $license->isPcTimerLicense()) {
+            return $this->errorResponse($license, 'Use a PC TimerApp license for TimerApp heartbeat.', 409, 'wrong_license_type');
+        }
+
         if ($license->isConsumedForRenewal()) {
             return $this->errorResponse($license, 'This license code has already been consumed for renewal.', 409, 'inactive');
         }
@@ -126,6 +134,10 @@ class TimerAppController extends Controller
                 'message' => 'Please buy license to activate some feature.',
                 'license' => null,
             ], 404);
+        }
+
+        if (! $license->isPcTimerLicense()) {
+            return $this->errorResponse($license, 'Use a PC TimerApp license for TimerApp status checks.', 409, 'wrong_license_type');
         }
 
         if ($license->isConsumedForRenewal()) {
