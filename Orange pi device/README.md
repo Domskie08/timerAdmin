@@ -1,0 +1,107 @@
+# DTimer WiFi Orange Pi Device
+
+This folder contains the shop-local DTimer WiFi controller for Orange Pi devices. It is designed for Debian/Ubuntu Server images without a desktop environment.
+
+## What It Does
+
+- Serves a Svelte customer portal and local admin dashboard.
+- Stores paid internet sessions, coin sales, and sync queue data in SQLite.
+- Works offline and syncs to TimerAdmin when internet returns.
+- Uses Linux firewall hooks for real internet allow/block enforcement.
+- Creates the first setup super admin automatically:
+  - username: `admin`
+  - password: `admin`
+
+The default password is intentionally marked as unsafe. The admin must change it before settings or network enforcement can be enabled.
+
+## Development
+
+Run backend only:
+
+```bash
+python app.py --host 127.0.0.1 --port 8080
+```
+
+Run frontend dev server:
+
+```bash
+npm install
+npm run dev
+```
+
+Build static frontend:
+
+```bash
+npm run build
+```
+
+Run Python tests from the repository root:
+
+```bash
+python -m unittest discover -s "Orange pi device/tests"
+```
+
+## Debian Package
+
+Build the `.deb` on a Debian/Ubuntu machine with `nodejs`, `npm`, and `dpkg-deb` installed:
+
+```bash
+cd "Orange pi device"
+bash scripts/build_deb.sh
+```
+
+Install on the Orange Pi:
+
+```bash
+sudo apt install ./dist/dtimer-orange-pi_1.0.0_all.deb
+```
+
+After install:
+
+```bash
+systemctl status dtimer-orange-pi
+```
+
+Open:
+
+- Customer portal: `http://orange-pi-ip:8080/`
+- Local admin: `http://orange-pi-ip:8080/admin`
+
+## Installed Paths
+
+- App code: `/opt/dtimer-orange-pi`
+- Config: `/etc/dtimer-orange-pi/dtimer.conf`
+- Data/database: `/var/lib/dtimer-orange-pi`
+- Logs: `/var/log/dtimer-orange-pi`
+- Service: `/etc/systemd/system/dtimer-orange-pi.service`
+
+## Security Notes
+
+- No system can be guaranteed impossible to hack.
+- This app is hardened by default:
+  - PBKDF2 password hashing.
+  - Signed `HttpOnly` admin session cookie.
+  - CSRF token required for admin mutations.
+  - Login lockout after repeated failures.
+  - Default password must be changed before setup.
+  - `device_secret` is not returned by normal APIs.
+  - Firewall enforcement is dry-run until explicitly enabled.
+  - systemd runs the app as a dedicated `dtimer` user.
+
+## Network Enforcement
+
+The Svelte UI and Python API decide who has paid time. The Orange Pi Linux firewall enforces internet access.
+
+The firewall helper reads:
+
+```text
+/var/lib/dtimer-orange-pi/active-sessions.json
+```
+
+By default, package config keeps enforcement off:
+
+```text
+DTIMER_ENFORCE_NETWORK=0
+```
+
+Real enforcement should only be enabled after the Orange Pi WAN/customer interfaces, license key, device secret, and MAC address are configured.

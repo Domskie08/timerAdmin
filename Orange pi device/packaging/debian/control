@@ -1,0 +1,10 @@
+Package: dtimer-orange-pi
+Version: 1.0.0
+Section: net
+Priority: optional
+Architecture: all
+Depends: python3, sqlite3, systemd, nftables, hostapd, dnsmasq
+Maintainer: DTimer <support@example.com>
+Description: DTimer WiFi Orange Pi local controller
+ A lightweight Svelte and Python controller for paid internet sessions,
+ offline coin-sale storage, TimerAdmin sync, and local firewall enforcement.

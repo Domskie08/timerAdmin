@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+set -e
+
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl daemon-reload || true
+fi
+
+if [ "${1:-}" = "purge" ]; then
+    rm -rf /var/lib/dtimer-orange-pi /var/log/dtimer-orange-pi /etc/dtimer-orange-pi
+    if id -u dtimer >/dev/null 2>&1; then
+        deluser --system dtimer >/dev/null 2>&1 || true
+    fi
+fi
+
+exit 0

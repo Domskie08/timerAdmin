@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+set -e
+
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl stop dtimer-orange-pi.service || true
+    systemctl disable dtimer-orange-pi.service || true
+fi
+
+exit 0

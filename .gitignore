@@ -18,4 +18,5 @@
 /.phpunit.result.cache
 /.idea
 /.vscode
-
+/.npm-cache/_cacache/
+/.npm-cache/_logs/

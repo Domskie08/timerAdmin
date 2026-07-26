@@ -1,0 +1,31 @@
+#!/usr/bin/env sh
+set -e
+
+if ! getent group dtimer >/dev/null; then
+    addgroup --system dtimer >/dev/null
+fi
+
+if ! id -u dtimer >/dev/null 2>&1; then
+    adduser --system --ingroup dtimer --home /var/lib/dtimer-orange-pi --no-create-home --shell /usr/sbin/nologin dtimer >/dev/null
+fi
+
+install -d -o dtimer -g dtimer -m 0750 /var/lib/dtimer-orange-pi
+install -d -o dtimer -g dtimer -m 0750 /var/log/dtimer-orange-pi
+install -d -o root -g root -m 0750 /etc/dtimer-orange-pi
+
+chown -R root:root /opt/dtimer-orange-pi
+chown -R dtimer:dtimer /var/lib/dtimer-orange-pi /var/log/dtimer-orange-pi
+chmod 0640 /etc/dtimer-orange-pi/dtimer.conf
+
+if command -v runuser >/dev/null 2>&1; then
+    runuser -u dtimer -- /usr/bin/python3 /opt/dtimer-orange-pi/app.py --data-dir /var/lib/dtimer-orange-pi --init-only
+else
+    su -s /bin/sh dtimer -c "/usr/bin/python3 /opt/dtimer-orange-pi/app.py --data-dir /var/lib/dtimer-orange-pi --init-only"
+fi
+
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl daemon-reload || true
+    systemctl enable --now dtimer-orange-pi.service || true
+fi
+
+exit 0
