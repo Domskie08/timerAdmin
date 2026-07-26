@@ -146,6 +146,41 @@
 
             <article class="panel">
                 <div class="section-heading">
+                    <div>
+                        <h2>Publish Home News</h2>
+                        <p class="card-subtitle">Anything posted here becomes visible on the public home page.</p>
+                    </div>
+                </div>
+
+                <form method="POST" action="/admin/news">
+                    <input type="hidden" name="_token" value={csrfToken} />
+
+                    <div class="field">
+                        <label for="news_title">Headline</label>
+                        <input id="news_title" type="text" name="title" required />
+                    </div>
+
+                    <div class="field">
+                        <label for="news_body">Announcement</label>
+                        <textarea id="news_body" name="body" required></textarea>
+                    </div>
+
+                    <div class="field">
+                        <label for="news_published_at">Publish at</label>
+                        <input id="news_published_at" type="datetime-local" name="published_at" />
+                    </div>
+
+                    <label class="field-inline">
+                        <input type="checkbox" name="is_pinned" value="1" />
+                        <span>Pin this post to the top of the home page</span>
+                    </label>
+
+                    <button type="submit" class="secondary-button">Post News</button>
+                </form>
+            </article>
+
+            <article class="panel">
+                <div class="section-heading">
                     <h3>Recent App Updates</h3>
                     <span class="chip">{updates.length} release{updates.length === 1 ? '' : 's'}</span>
                 </div>
@@ -229,41 +264,6 @@
                     </div>
 
                     <button type="submit" class="secondary-button">Change Password</button>
-                </form>
-            </article>
-
-            <article class="panel">
-                <div class="section-heading">
-                    <div>
-                        <h2>Publish Home News</h2>
-                        <p class="card-subtitle">Anything posted here becomes visible on the public home page.</p>
-                    </div>
-                </div>
-
-                <form method="POST" action="/admin/news">
-                    <input type="hidden" name="_token" value={csrfToken} />
-
-                    <div class="field">
-                        <label for="news_title">Headline</label>
-                        <input id="news_title" type="text" name="title" required />
-                    </div>
-
-                    <div class="field">
-                        <label for="news_body">Announcement</label>
-                        <textarea id="news_body" name="body" required></textarea>
-                    </div>
-
-                    <div class="field">
-                        <label for="news_published_at">Publish at</label>
-                        <input id="news_published_at" type="datetime-local" name="published_at" />
-                    </div>
-
-                    <label class="field-inline">
-                        <input type="checkbox" name="is_pinned" value="1" />
-                        <span>Pin this post to the top of the home page</span>
-                    </label>
-
-                    <button type="submit" class="secondary-button">Post News</button>
                 </form>
             </article>
 
