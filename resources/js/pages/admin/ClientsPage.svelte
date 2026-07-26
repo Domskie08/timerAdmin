@@ -33,7 +33,15 @@
     <title>Client Accounts | {appName}</title>
 </svelte:head>
 
-<AdminLayout {flash} {csrfToken} {appName}>
+<AdminLayout {flash} {csrfToken} {appName} current="clients">
+    <section class="section-heading page-heading">
+        <div>
+            <h2>Client Accounts</h2>
+            <p class="card-subtitle">Client admins, PC Timer devices, DTimer WiFi machines, sales, and revocation status.</p>
+        </div>
+        <a href="/admin" class="secondary-button">Back to Admin</a>
+    </section>
+
     <section class="stats-grid">
         <StatCard label="Client Accounts" value={stats.clientAccounts ?? 0} hint="Registered client admins" accent="aqua" />
         <StatCard label="PC Timer" value={stats.pcTimers ?? 0} hint="Claimed PC Timer licenses" accent="mint" />
@@ -44,10 +52,9 @@
     <article class="table-shell">
         <div class="section-heading">
             <div>
-                <h2>Client Accounts</h2>
-                <p class="card-subtitle">Client admins, PC Timer devices, DTimer WiFi machines, sales, and revocation status.</p>
+                <h2>Client Registry</h2>
+                <p class="card-subtitle">Client account totals and linked device activity.</p>
             </div>
-            <a href="/admin" class="secondary-button">License Dashboard</a>
         </div>
 
         <div class="table-wrap">

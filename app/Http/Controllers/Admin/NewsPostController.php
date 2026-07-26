@@ -20,7 +20,7 @@ class NewsPostController extends Controller
         ]);
 
         return redirect()
-            ->route('admin.dashboard')
+            ->route('admin.setup')
             ->with('success', 'News post published on the home page.');
     }
 }

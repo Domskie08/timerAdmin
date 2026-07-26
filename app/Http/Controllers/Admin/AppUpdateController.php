@@ -35,7 +35,7 @@ class AppUpdateController extends Controller
         });
 
         return redirect()
-            ->route('admin.dashboard')
+            ->route('admin.setup')
             ->with('success', 'TimerApp update published with the Google Drive download link.');
     }
 
@@ -79,7 +79,7 @@ class AppUpdateController extends Controller
         }
 
         return redirect()
-            ->route('admin.dashboard')
+            ->route('admin.setup')
             ->with('success', $message);
     }
 }

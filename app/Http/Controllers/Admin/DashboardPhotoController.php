@@ -32,7 +32,7 @@ class DashboardPhotoController extends Controller
         ]);
 
         return redirect()
-            ->route('admin.dashboard')
+            ->route('admin.setup')
             ->with('success', 'Dashboard photo uploaded successfully.');
     }
 
@@ -47,7 +47,7 @@ class DashboardPhotoController extends Controller
         }
 
         return redirect()
-            ->route('admin.dashboard')
+            ->route('admin.setup')
             ->with('success', 'Dashboard photo deleted successfully.');
     }
 }

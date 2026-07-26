@@ -31,7 +31,7 @@ class AppUpdateDownloadMirrorTest extends TestCase
                 'description' => 'Adds a faster download mirror.',
                 'external_download_url' => $mirrorUrl,
             ])
-            ->assertRedirect(route('admin.dashboard'))
+            ->assertRedirect(route('admin.setup'))
             ->assertSessionHas('success');
 
         $update = AppUpdate::query()->first();

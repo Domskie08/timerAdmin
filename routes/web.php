@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DashboardPhotoController as AdminDashboardPhotoCo
 use App\Http\Controllers\Admin\LicenseController;
 use App\Http\Controllers\Admin\NewsPostController;
 use App\Http\Controllers\Admin\PasswordController;
+use App\Http\Controllers\Admin\SetupController;
 use App\Http\Controllers\DashboardPhotoController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Client\AuthController as ClientAuthController;
@@ -42,6 +43,7 @@ Route::middleware('auth')->group(function (): void {
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function (): void {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/setup', [SetupController::class, 'index'])->name('setup');
     Route::get('/clients', [ClientController::class, 'index'])->name('clients.index');
     Route::post('/licenses', [LicenseController::class, 'store'])->name('licenses.store');
     Route::post('/licenses/pc', [LicenseController::class, 'storePc'])->name('licenses.pc.store');

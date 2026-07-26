@@ -15,7 +15,7 @@ class PasswordController extends Controller
         ])->save();
 
         return redirect()
-            ->route('admin.dashboard')
+            ->route('admin.setup')
             ->with('success', 'Admin password changed successfully.');
     }
 }
