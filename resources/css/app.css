@@ -217,6 +217,36 @@ img {
     grid-template-columns: 1.4fr 0.9fr;
 }
 
+.admin-dashboard-grid {
+    align-items: start;
+}
+
+.admin-dashboard-grid > .stack {
+    min-width: 0;
+}
+
+.admin-dashboard-grid > .stack:first-child {
+    display: contents;
+}
+
+.admin-dashboard-grid > .stack:first-child > .split-grid {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+}
+
+.admin-dashboard-grid > .stack:last-child {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+}
+
+.admin-dashboard-grid .license-registry-shell {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin-top: 0;
+}
+
 .split-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -673,7 +703,8 @@ td strong {
 }
 
 .secret-value {
-    word-break: break-all;
+    overflow-wrap: anywhere;
+    word-break: normal;
 }
 
 .table-pill {
@@ -910,7 +941,7 @@ td strong {
 .license-registry-table td.action-column {
     position: sticky;
     right: 0;
-    min-width: 132px;
+    min-width: 150px;
     background: linear-gradient(180deg, rgba(17, 28, 46, 0.98), rgba(11, 18, 31, 0.96));
     box-shadow: -16px 0 24px rgba(7, 13, 24, 0.4);
 }
@@ -934,6 +965,51 @@ td strong {
     gap: 10px;
 }
 
+.license-registry-shell .license-registry-table {
+    table-layout: fixed;
+    min-width: 1480px;
+}
+
+.license-registry-shell .license-registry-table th:nth-child(1) {
+    width: 150px;
+}
+
+.license-registry-shell .license-registry-table th:nth-child(2) {
+    width: 120px;
+}
+
+.license-registry-shell .license-registry-table th:nth-child(3) {
+    width: 210px;
+}
+
+.license-registry-shell .license-registry-table th:nth-child(4) {
+    width: 175px;
+}
+
+.license-registry-shell .license-registry-table th:nth-child(5) {
+    width: 130px;
+}
+
+.license-registry-shell .license-registry-table th:nth-child(6) {
+    width: 185px;
+}
+
+.license-registry-shell .license-registry-table th:nth-child(7) {
+    width: 170px;
+}
+
+.license-registry-shell .license-registry-table th:nth-child(8) {
+    width: 145px;
+}
+
+.license-registry-shell .license-registry-table th:nth-child(9) {
+    width: 155px;
+}
+
+.license-registry-shell .license-registry-table th:nth-child(10) {
+    width: 150px;
+}
+
 .renew-license-form {
     display: grid;
     gap: 8px;
@@ -953,6 +1029,88 @@ td strong {
 .renew-license-input:focus {
     border-color: rgba(56, 214, 255, 0.58);
     box-shadow: 0 0 0 3px rgba(56, 214, 255, 0.12);
+}
+
+@media (max-width: 900px) {
+    .license-registry-shell .table-wrap {
+        overflow-x: visible;
+    }
+
+    .license-registry-shell .license-registry-table,
+    .license-registry-shell .license-registry-table thead,
+    .license-registry-shell .license-registry-table tbody,
+    .license-registry-shell .license-registry-table tr,
+    .license-registry-shell .license-registry-table td {
+        display: block;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .license-registry-shell .license-registry-table {
+        min-width: 0;
+    }
+
+    .license-registry-shell .license-registry-table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+
+    .license-registry-shell .license-registry-table tbody {
+        display: grid;
+        gap: 12px;
+    }
+
+    .license-registry-shell .license-registry-table tr {
+        padding: 14px;
+        border: 1px solid rgba(135, 170, 214, 0.14);
+        border-radius: 18px;
+        background: rgba(7, 14, 26, 0.58);
+    }
+
+    .license-registry-shell .license-registry-table td {
+        display: grid;
+        grid-template-columns: minmax(112px, 0.36fr) minmax(0, 1fr);
+        gap: 10px;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(135, 170, 214, 0.1);
+    }
+
+    .license-registry-shell .license-registry-table td:last-child {
+        border-bottom: 0;
+    }
+
+    .license-registry-shell .license-registry-table td::before {
+        content: attr(data-label);
+        color: var(--muted);
+        font-size: 0.74rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .license-registry-shell .license-registry-table td[colspan] {
+        display: block;
+    }
+
+    .license-registry-shell .license-registry-table td[colspan]::before {
+        content: none;
+    }
+
+    .license-registry-table th.action-column,
+    .license-registry-table td.action-column {
+        position: static;
+        min-width: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .license-registry-shell .license-action-stack {
+        align-items: stretch;
+    }
 }
 
 @media (max-width: 960px) {
@@ -999,6 +1157,18 @@ td strong {
     .download-actions .secondary-button {
         flex: 1 1 160px;
     }
+
+    .admin-dashboard-grid > .stack:first-child {
+        display: grid;
+        gap: 18px;
+    }
+
+    .admin-dashboard-grid > .stack:first-child > .split-grid,
+    .admin-dashboard-grid > .stack:last-child,
+    .admin-dashboard-grid .license-registry-shell {
+        grid-column: auto;
+        grid-row: auto;
+    }
 }
 
 @media (max-width: 640px) {
@@ -1036,5 +1206,10 @@ td strong {
     .form-actions .primary-button,
     .form-actions .secondary-button {
         flex: 1 1 180px;
+    }
+
+    .license-registry-shell .license-registry-table td {
+        grid-template-columns: 1fr;
+        gap: 4px;
     }
 }

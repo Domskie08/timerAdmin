@@ -140,7 +140,7 @@
         <StatCard label="Active Devices" value={stats.activeDevices ?? 0} hint={`Heartbeat inside ${stats.activeWindowMinutes ?? 10} minutes. ${stats.expiredLicenses ?? 0} expired license${(stats.expiredLicenses ?? 0) === 1 ? '' : 's'} in the system.`} accent="rose" />
     </section>
 
-    <section class="dashboard-grid">
+    <section class="dashboard-grid admin-dashboard-grid">
         <div class="stack">
             <section class="split-grid">
             <article class="panel">
@@ -212,7 +212,7 @@
             </article>
             </section>
 
-            <article class="table-shell">
+            <article class="table-shell license-registry-shell">
                 <div class="section-heading">
                     <div>
                         <h2>License Registry</h2>
@@ -241,20 +241,20 @@
                             {#if licenses.length}
                                 {#each licenses as license}
                                     <tr>
-                                        <td>
+                                        <td data-label="License key">
                                             <strong class="mono">{license.licenseKey}</strong>
                                             {#if license.appVersion}
                                                 <span class="muted">App v{license.appVersion}</span>
                                             {/if}
                                         </td>
-                                        <td>
+                                        <td data-label="Type">
                                             <TablePill status={license.productTypeLabel} />
                                         </td>
-                                        <td>
+                                        <td data-label="Device secret">
                                             <strong class="mono secret-value">{license.deviceSecret}</strong>
                                             <span class="muted">Auto-generated when the license is created.</span>
                                         </td>
-                                        <td>
+                                        <td data-label="Term">
                                             <strong>{license.durationLabel}</strong>
                                             <span class="muted">Created {formatDate(license.creationDate, true)}</span>
                                             {#if license.isConsumedForRenewal && license.consumedAt}
@@ -268,8 +268,8 @@
                                                 {/each}
                                             {/if}
                                         </td>
-                                        <td>{license.isLifetime ? 'Lifetime' : license.expiryDate ? formatDate(license.expiryDate) : 'Starts after activation'}</td>
-                                        <td>
+                                        <td data-label="Expiry date">{license.isLifetime ? 'Lifetime' : license.expiryDate ? formatDate(license.expiryDate) : 'Starts after activation'}</td>
+                                        <td data-label="Device">
                                             <strong class="mono">{license.deviceId || 'Not linked yet'}</strong>
                                             <span class="muted">{license.deviceName}</span>
                                             {#if license.productType !== 'pc_timer' && license.machineId && license.machineId !== license.deviceId}
@@ -279,7 +279,7 @@
                                                 <span class="muted">Consumed for renewal of {license.consumedForLicenseKey}</span>
                                             {/if}
                                         </td>
-                                        <td>
+                                        <td data-label="Client">
                                             <strong>{license.clientAccountName || 'Unclaimed'}</strong>
                                             {#if license.clientAccountId}
                                                 <span class="muted">Client account #{license.clientAccountId}</span>
@@ -287,10 +287,10 @@
                                                 <span class="muted">Available for client claim</span>
                                             {/if}
                                         </td>
-                                        <td>
+                                        <td data-label="Provision status">
                                             <TablePill status={license.provisionStatus} />
                                         </td>
-                                        <td>
+                                        <td data-label="License status">
                                             <TablePill status={license.licenseStatus} />
                                             {#if license.activatedAt}
                                                 <div class="muted">Activated {formatDate(license.activatedAt, true)}</div>
@@ -301,7 +301,7 @@
                                                 <div class="muted">Waiting for Settings activation.</div>
                                             {/if}
                                         </td>
-                                        <td class="action-column">
+                                        <td class="action-column" data-label="Actions">
                                             <div class="license-action-stack">
                                                 {#if license.canRenew}
                                                     <form
