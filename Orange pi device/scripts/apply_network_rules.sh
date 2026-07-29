@@ -55,14 +55,18 @@ PY
 
 nft list table inet dtimer_filter >/dev/null 2>&1 && nft delete table inet dtimer_filter
 nft list table ip dtimer_nat >/dev/null 2>&1 && nft delete table ip dtimer_nat
+nft list table inet dtimer_captive >/dev/null 2>&1 && nft delete table inet dtimer_captive
 
 nft add table inet dtimer_filter
 nft add set inet dtimer_filter allowed_v4 '{ type ipv4_addr; flags interval; }'
 nft add set inet dtimer_filter allowed_v6 '{ type ipv6_addr; flags interval; }'
+nft add table inet dtimer_captive
+nft add set inet dtimer_captive allowed_v4 '{ type ipv4_addr; flags interval; }'
 
 if [[ "${#ALLOWED_V4[@]}" -gt 0 ]]; then
   V4_JOINED="$(IFS=, ; echo "${ALLOWED_V4[*]}")"
   nft add element inet dtimer_filter allowed_v4 "{ ${V4_JOINED} }"
+  nft add element inet dtimer_captive allowed_v4 "{ ${V4_JOINED} }"
 fi
 
 if [[ "${#ALLOWED_V6[@]}" -gt 0 ]]; then
@@ -79,5 +83,9 @@ nft add rule inet dtimer_filter forward iifname "${CUSTOMER_IFACE}" drop
 nft add table ip dtimer_nat
 nft add chain ip dtimer_nat postrouting '{ type nat hook postrouting priority srcnat; policy accept; }'
 nft add rule ip dtimer_nat postrouting oifname "${WAN_IFACE}" masquerade
+
+nft add chain inet dtimer_captive prerouting '{ type nat hook prerouting priority dstnat; policy accept; }'
+nft add rule inet dtimer_captive prerouting iifname "${CUSTOMER_IFACE}" ip saddr @allowed_v4 return
+nft add rule inet dtimer_captive prerouting iifname "${CUSTOMER_IFACE}" tcp dport 80 redirect to ":${DTIMER_PORT:-8080}"
 
 echo "Applied DTimer WiFi network rules for ${#ALLOWED_V4[@]} IPv4 and ${#ALLOWED_V6[@]} IPv6 session(s)."

@@ -189,7 +189,7 @@ class DeviceStore:
             "app_version": "0.1.0",
             "firmware_version": "",
             "wan_interface": "eth0",
-            "customer_interface": "wlan0",
+            "customer_interface": "eth1",
             "rate_minutes_per_coin": "5",
             "coin_amount_minor": "500",
             "currency": "PHP",

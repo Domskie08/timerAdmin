@@ -92,6 +92,50 @@ Open:
 
 The Svelte UI and Python API decide who has paid time. The Orange Pi Linux firewall enforces internet access.
 
+Recommended USB-to-LAN wiring:
+
+- Built-in Orange Pi LAN port: ISP/router input, usually `eth0`
+- USB-to-LAN adapter: customer/output side to access point or switch, usually `eth1`
+- Customer portal after customer LAN setup: `http://10.0.0.1:8080/`
+- Local admin after customer LAN setup: `http://10.0.0.1:8080/admin`
+
+Check interface names on the Orange Pi:
+
+```bash
+ip link
+```
+
+If the USB-to-LAN adapter is not `eth1`, edit `/etc/dtimer-orange-pi/dtimer.conf` and replace `eth1` with the actual USB adapter name:
+
+```text
+DTIMER_WAN_INTERFACE=eth0
+DTIMER_CUSTOMER_INTERFACE=eth1
+```
+
+If `dnsmasq` fails at boot, check the exact reason:
+
+```bash
+systemctl status dnsmasq --no-pager
+journalctl -u dnsmasq -b --no-pager | tail -40
+ip link
+```
+
+Most failures mean the USB-to-LAN adapter name is different from `eth1`. Update `DTIMER_CUSTOMER_INTERFACE`, then restart:
+
+```bash
+sudo systemctl restart dtimer-orange-pi-customer-lan
+sudo systemctl restart dnsmasq
+```
+
+To configure the USB-to-LAN side with `10.0.0.1/20` and DHCP:
+
+```bash
+sudo /opt/dtimer-orange-pi/scripts/configure_usb_customer_lan.sh
+```
+
+The package also installs `dtimer-orange-pi-customer-lan.service`, which runs this setup on boot when `DTIMER_CONFIGURE_CUSTOMER_LAN=1`.
+It also redirects unpaid customer HTTP traffic on port 80 to the local portal, which helps Windows, Android, and iOS show a sign-in portal notification.
+
 The firewall helper reads:
 
 ```text

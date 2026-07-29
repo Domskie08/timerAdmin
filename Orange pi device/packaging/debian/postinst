@@ -25,6 +25,7 @@ fi
 
 if command -v systemctl >/dev/null 2>&1; then
     systemctl daemon-reload || true
+    systemctl enable --now dtimer-orange-pi-customer-lan.service || true
     systemctl enable --now dtimer-orange-pi.service || true
 fi
 

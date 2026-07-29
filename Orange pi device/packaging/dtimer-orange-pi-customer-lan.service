@@ -1,0 +1,14 @@
+[Unit]
+Description=DTimer WiFi USB-to-LAN customer network
+After=network-pre.target
+Before=network-online.target dtimer-orange-pi.service
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/dtimer-orange-pi/dtimer.conf
+ExecStart=/opt/dtimer-orange-pi/scripts/configure_usb_customer_lan.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

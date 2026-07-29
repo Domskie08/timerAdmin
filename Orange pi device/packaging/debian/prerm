@@ -4,6 +4,8 @@ set -e
 if command -v systemctl >/dev/null 2>&1; then
     systemctl stop dtimer-orange-pi.service || true
     systemctl disable dtimer-orange-pi.service || true
+    systemctl stop dtimer-orange-pi-customer-lan.service || true
+    systemctl disable dtimer-orange-pi-customer-lan.service || true
 fi
 
 exit 0

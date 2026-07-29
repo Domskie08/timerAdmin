@@ -6,6 +6,10 @@ if command -v systemctl >/dev/null 2>&1; then
 fi
 
 if [ "${1:-}" = "purge" ]; then
+    if command -v nft >/dev/null 2>&1; then
+        nft list table inet dtimer_captive >/dev/null 2>&1 && nft delete table inet dtimer_captive || true
+    fi
+    rm -f /etc/dnsmasq.d/dtimer-orange-pi.conf /etc/sysctl.d/99-dtimer-orange-pi.conf
     rm -rf /var/lib/dtimer-orange-pi /var/log/dtimer-orange-pi /etc/dtimer-orange-pi
     if id -u dtimer >/dev/null 2>&1; then
         deluser --system dtimer >/dev/null 2>&1 || true

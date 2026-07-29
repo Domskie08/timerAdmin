@@ -3,6 +3,7 @@ from __future__ import annotations
 import ipaddress
 import json
 import mimetypes
+import os
 from http import HTTPStatus
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -21,6 +22,15 @@ from .validators import ValidationError, require_string, validate_int, validate_
 
 SESSION_COOKIE = "dtimer_admin_session"
 MAX_JSON_BYTES = 64 * 1024
+CAPTIVE_PORTAL_PATHS = {
+    "/connecttest.txt",
+    "/ncsi.txt",
+    "/generate_204",
+    "/gen_204",
+    "/hotspot-detect.html",
+    "/library/test/success.html",
+    "/success.txt",
+}
 
 
 def serve(config: DeviceConfig, store: DeviceStore, host: str, port: int) -> None:
@@ -41,6 +51,10 @@ def make_handler(config: DeviceConfig, store: DeviceStore) -> type[BaseHTTPReque
 
         def do_GET(self) -> None:
             path = urlparse(self.path).path
+            if path in CAPTIVE_PORTAL_PATHS:
+                self.redirect_to_portal()
+                return
+
             if path == "/api/status":
                 self.handle_public_status()
                 return
@@ -344,6 +358,15 @@ def make_handler(config: DeviceConfig, store: DeviceStore) -> type[BaseHTTPReque
             self.send_header("Referrer-Policy", "same-origin")
             self.end_headers()
             self.wfile.write(body)
+
+        def redirect_to_portal(self) -> None:
+            customer_address = os.getenv("DTIMER_CUSTOMER_ADDRESS", "10.0.0.1/20").split("/", 1)[0]
+            port = os.getenv("DTIMER_PORT", "8080")
+            self.send_response(HTTPStatus.FOUND)
+            self.send_header("Location", f"http://{customer_address}:{port}/")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
 
         def serve_static_asset(self, path: str) -> None:
             relative = unquote(path.lstrip("/"))

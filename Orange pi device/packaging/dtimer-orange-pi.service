@@ -1,7 +1,7 @@
 [Unit]
 Description=DTimer WiFi Orange Pi local controller
-After=network-online.target
-Wants=network-online.target
+After=network-online.target dtimer-orange-pi-customer-lan.service
+Wants=network-online.target dtimer-orange-pi-customer-lan.service
 
 [Service]
 Type=simple
