@@ -19,6 +19,7 @@ MAX_ONLINE_BYTES = 1024 * 1024
 MAX_USB_PACKAGES = 200
 MAX_USB_DEPTH = 3
 PACKAGE_NAME = "dtimer-orange-pi"
+ONLINE_PRODUCT_TYPE = "dtimer_wifi"
 PACKAGE_FILE_RE = re.compile(
     r"^dtimer-orange-pi_(?P<version>[^_]+)_(?P<architecture>[^_]+)\.deb$",
     re.IGNORECASE,
@@ -120,9 +121,9 @@ class UpdateChecker:
         return self.fallback_version or "unknown"
 
     def online_updates(self, installed_version: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-        collection_url = f"{self.base_url}/api/v1/updates"
+        collection_url = f"{self.base_url}/api/v1/updates?product={ONLINE_PRODUCT_TYPE}"
         support_url = f"{self.base_url}/support"
-        latest_url = f"{self.base_url}/api/v1/updates/latest"
+        latest_url = f"{self.base_url}/api/v1/updates/latest?product={ONLINE_PRODUCT_TYPE}"
         endpoint = collection_url
 
         try:
@@ -215,6 +216,10 @@ class UpdateChecker:
         if not isinstance(raw_update, dict):
             return None
 
+        product_type = str(raw_update.get("productType") or raw_update.get("product_type") or "").strip()
+        if product_type != ONLINE_PRODUCT_TYPE:
+            return None
+
         version = str(raw_update.get("version") or "").strip()[:50]
         if not version:
             return None
@@ -228,7 +233,7 @@ class UpdateChecker:
             "id": f"online:{raw_update.get('id') or version}",
             "source": "online",
             "sourceLabel": urlparse(self.base_url).netloc,
-            "title": str(raw_update.get("title") or "DTimer update").strip()[:120],
+            "title": str(raw_update.get("title") or "DTimer WiFi update").strip()[:120],
             "version": version,
             "description": str(raw_update.get("description") or "").strip()[:4000],
             "fileName": str(raw_update.get("fileName") or "").strip()[:255],

@@ -16,6 +16,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TimerAppController extends Controller
@@ -255,7 +256,9 @@ class TimerAppController extends Controller
 
     public function latestUpdate(Request $request): JsonResponse
     {
+        $productType = $this->requestedUpdateProduct($request);
         $latest = AppUpdate::query()
+            ->forProduct($productType)
             ->published()
             ->where('is_active', true)
             ->latest('published_at')
@@ -263,6 +266,7 @@ class TimerAppController extends Controller
 
         if (! $latest) {
             return response()->json([
+                'product' => $productType,
                 'has_update' => false,
                 'update' => null,
             ]);
@@ -272,6 +276,7 @@ class TimerAppController extends Controller
         $hasUpdate = $currentVersion === '' || version_compare($latest->version, $currentVersion, '>');
 
         return response()->json([
+            'product' => $productType,
             'has_update' => $hasUpdate,
             'update' => $latest->toPublicArray(),
         ]);
@@ -279,9 +284,11 @@ class TimerAppController extends Controller
 
     public function updates(Request $request): JsonResponse
     {
+        $productType = $this->requestedUpdateProduct($request);
         $currentVersion = $request->string('current_version')->trim()->toString();
         $onlyNewer = $request->boolean('only_newer');
         $updates = AppUpdate::query()
+            ->forProduct($productType)
             ->published()
             ->latest('published_at')
             ->latest('id')
@@ -296,6 +303,7 @@ class TimerAppController extends Controller
             ->map(fn (AppUpdate $update): array => $update->toPublicArray());
 
         return response()->json([
+            'product' => $productType,
             'current_version' => $currentVersion ?: null,
             'has_updates' => $updates->isNotEmpty(),
             'updates' => $updates,
@@ -311,6 +319,18 @@ class TimerAppController extends Controller
         }
 
         return Storage::disk('public')->download($appUpdate->file_path, $appUpdate->file_name);
+    }
+
+    private function requestedUpdateProduct(Request $request): string
+    {
+        $productType = $request->string('product')->trim()->toString() ?: AppUpdate::TYPE_TIMER_APP;
+        if (! array_key_exists($productType, AppUpdate::PRODUCT_LABELS)) {
+            throw ValidationException::withMessages([
+                'product' => 'Select timer_app or dtimer_wifi.',
+            ]);
+        }
+
+        return $productType;
     }
 
     private function resolveLicense(string $licenseKey): License

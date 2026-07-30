@@ -16,16 +16,21 @@ class AppUpdateController extends Controller
     {
         $publishedAt = PhilippineInternetClock::now();
         $externalDownloadUrl = $request->string('external_download_url')->trim()->toString();
+        $productType = $request->string('product_type')->toString();
+        $productLabel = AppUpdate::PRODUCT_LABELS[$productType];
 
-        DB::transaction(function () use ($publishedAt, $request, $externalDownloadUrl): void {
-            AppUpdate::query()->update(['is_active' => false]);
+        DB::transaction(function () use ($publishedAt, $request, $externalDownloadUrl, $productType, $productLabel): void {
+            AppUpdate::query()
+                ->forProduct($productType)
+                ->update(['is_active' => false]);
 
             AppUpdate::query()->create([
+                'product_type' => $productType,
                 'title' => $request->string('title')->toString(),
                 'version' => $request->string('version')->toString(),
                 'description' => $request->string('description')->toString() ?: null,
                 'file_path' => 'external-download',
-                'file_name' => 'Google Drive download',
+                'file_name' => "{$productLabel} Google Drive download",
                 'file_size' => 0,
                 'external_download_url' => $externalDownloadUrl,
                 'is_active' => true,
@@ -36,16 +41,18 @@ class AppUpdateController extends Controller
 
         return redirect()
             ->route('admin.setup')
-            ->with('success', 'TimerApp update published with the Google Drive download link.');
+            ->with('success', "{$productLabel} update published with the Google Drive download link.");
     }
 
     public function destroy(AppUpdate $appUpdate): RedirectResponse
     {
         $wasActive = $appUpdate->is_active;
         $filePath = $appUpdate->file_path;
+        $productType = $appUpdate->product_type;
+        $productLabel = AppUpdate::PRODUCT_LABELS[$productType] ?? 'Software';
         $replacementActivated = false;
 
-        DB::transaction(function () use ($appUpdate, $wasActive, &$replacementActivated): void {
+        DB::transaction(function () use ($appUpdate, $wasActive, $productType, &$replacementActivated): void {
             $appUpdate->delete();
 
             if (! $wasActive) {
@@ -53,10 +60,14 @@ class AppUpdateController extends Controller
             }
 
             $replacement = AppUpdate::query()
+                ->forProduct($productType)
                 ->published()
                 ->latest('published_at')
                 ->first()
-                ?? AppUpdate::query()->latest('published_at')->first();
+                ?? AppUpdate::query()
+                    ->forProduct($productType)
+                    ->latest('published_at')
+                    ->first();
 
             if (! $replacement) {
                 return;
@@ -70,7 +81,7 @@ class AppUpdateController extends Controller
             Storage::disk('public')->delete($filePath);
         }
 
-        $message = 'TimerApp update deleted successfully.';
+        $message = "{$productLabel} update deleted successfully.";
 
         if ($wasActive) {
             $message .= $replacementActivated

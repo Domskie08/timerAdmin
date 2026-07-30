@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 from urllib.error import HTTPError
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -41,6 +42,7 @@ class UpdateCheckerTest(unittest.TestCase):
                 "updates": [
                     {
                         "id": 2,
+                        "productType": "dtimer_wifi",
                         "title": "DTimer 1.2.0",
                         "version": "1.2.0",
                         "description": "New release",
@@ -48,6 +50,7 @@ class UpdateCheckerTest(unittest.TestCase):
                     },
                     {
                         "id": 1,
+                        "productType": "dtimer_wifi",
                         "title": "DTimer 0.9.0",
                         "version": "0.9.0",
                         "downloadUrl": "https://dtimerapp.online/api/v1/updates/1/download",
@@ -73,8 +76,9 @@ class UpdateCheckerTest(unittest.TestCase):
         <html><body>
           <script data-page="app" type="application/json">
             {"component":"SupportPage","props":{"updates":[
-              {"id":2,"title":"DTimer 1.2.0","version":"1.2.0"},
-              {"id":1,"title":"DTimer 1.1.0","version":"1.1.0"}
+              {"id":2,"productType":"dtimer_wifi","title":"DTimer 1.2.0","version":"1.2.0"},
+              {"id":1,"productType":"dtimer_wifi","title":"DTimer 1.1.0","version":"1.1.0"},
+              {"id":3,"productType":"timer_app","title":"Timer App 9.0.0","version":"9.0.0"}
             ]}}
           </script>
         </body></html>
@@ -82,7 +86,7 @@ class UpdateCheckerTest(unittest.TestCase):
 
         def respond(request, timeout):
             self.assertEqual(8, timeout)
-            if request.full_url.endswith("/api/v1/updates"):
+            if urlparse(request.full_url).path.endswith("/api/v1/updates"):
                 raise HTTPError(request.full_url, 404, "Not Found", {}, None)
             return FakeHttpResponse(support_page, raw=True)
 
@@ -101,6 +105,7 @@ class UpdateCheckerTest(unittest.TestCase):
             "has_update": True,
             "update": {
                 "id": 3,
+                "productType": "dtimer_wifi",
                 "title": "DTimer 1.3.0",
                 "version": "1.3.0",
                 "downloadUrl": "https://dtimerapp.online/api/v1/updates/3/download",
@@ -109,7 +114,7 @@ class UpdateCheckerTest(unittest.TestCase):
 
         def respond(request, timeout):
             self.assertEqual(8, timeout)
-            if request.full_url.endswith("/api/v1/updates"):
+            if urlparse(request.full_url).path.endswith("/api/v1/updates"):
                 raise HTTPError(request.full_url, 404, "Not Found", {}, None)
             return FakeHttpResponse(latest)
 
@@ -119,8 +124,30 @@ class UpdateCheckerTest(unittest.TestCase):
         updates, source = checker.online_updates("1.0.0")
 
         self.assertTrue(source["ok"])
-        self.assertTrue(source["endpoint"].endswith("/updates/latest"))
+        self.assertTrue(urlparse(source["endpoint"]).path.endswith("/updates/latest"))
         self.assertEqual("1.3.0", updates[0]["version"])
+
+    @patch("dtimer_device.updates.urlopen")
+    def test_online_check_ignores_timer_app_releases(self, mocked_urlopen):
+        mocked_urlopen.return_value = FakeHttpResponse(
+            {
+                "updates": [
+                    {
+                        "id": 1,
+                        "productType": "timer_app",
+                        "title": "Timer App",
+                        "version": "99.0.0",
+                    }
+                ]
+            }
+        )
+        checker = UpdateChecker(installed_version="1.0.0")
+
+        updates, source = checker.online_updates("1.0.0")
+
+        self.assertTrue(source["ok"])
+        self.assertEqual(0, source["count"])
+        self.assertEqual([], updates)
 
     def test_usb_check_lists_dtimer_deb_packages(self):
         usb_root = self.tmpdir / "usb"

@@ -35,9 +35,9 @@
 <PublicLayout {auth} {appName}>
     <section class="panel support-hero">
         <p class="eyebrow">Support</p>
-        <h1 class="support-title">TimerApp Downloads</h1>
+        <h1 class="support-title">Software Downloads</h1>
         <p class="section-copy">
-            Download any TimerApp version published by the admin team.
+            Download published Timer App and DTimer WiFi releases.
         </p>
     </section>
 
@@ -60,6 +60,7 @@
                                 <p class="section-copy">{update.description}</p>
                             {/if}
                             <div class="tag-row">
+                                <span class="pill-tag">{update.productLabel}</span>
                                 <span class="pill-tag">{update.fileName}</span>
                                 {#if formatFileSize(update.fileSize)}
                                     <span class="pill-tag">{formatFileSize(update.fileSize)}</span>
@@ -74,7 +75,7 @@
                 {/each}
             </div>
         {:else}
-            <div class="empty-state">No TimerApp downloads are available yet.</div>
+            <div class="empty-state">No software downloads are available yet.</div>
         {/if}
     </section>
 </PublicLayout>

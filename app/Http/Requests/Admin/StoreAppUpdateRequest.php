@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\AppUpdate;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreAppUpdateRequest extends FormRequest
 {
@@ -14,6 +16,7 @@ class StoreAppUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'product_type' => ['required', Rule::in(array_keys(AppUpdate::PRODUCT_LABELS))],
             'version' => ['required', 'string', 'max:50'],
             'title' => ['required', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:4000'],

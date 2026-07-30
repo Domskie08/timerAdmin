@@ -25,6 +25,7 @@ class HandleInertiaRequests extends Middleware
                 'licenseDuration' => fn (): ?string => $request->session()->getOldInput('duration'),
                 'renewLicenseCode' => fn (): ?string => $request->session()->getOldInput('renew_license_code'),
                 'renewTargetLicenseId' => fn (): ?string => $request->session()->getOldInput('target_license_id'),
+                'updateProductType' => fn (): ?string => $request->session()->getOldInput('product_type'),
                 'updateExternalDownloadUrl' => fn (): ?string => $request->session()->getOldInput('external_download_url'),
             ],
         ]);

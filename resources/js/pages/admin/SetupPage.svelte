@@ -12,8 +12,10 @@
 
     let selectedDashboardPhotoName = '';
     let selectedDashboardPhotoSizeLabel = '';
+    let updateProductType = formState?.updateProductType || 'timer_app';
     let deletingUpdateIds = [];
     let deletingDashboardPhotoIds = [];
+    $: updateProductLabel = updateProductType === 'dtimer_wifi' ? 'DTimer WiFi' : 'Timer App';
 
     const formatDate = (value, withTime = false) => {
         if (!value) {
@@ -91,7 +93,7 @@
     <section class="section-heading page-heading">
         <div>
             <h2>Setup</h2>
-            <p class="card-subtitle">Admin account, TimerApp releases, home news, and dashboard photos.</p>
+            <p class="card-subtitle">Admin account, software releases, home news, and dashboard photos.</p>
         </div>
         <a href="/admin" class="secondary-button">Back to Admin</a>
     </section>
@@ -101,13 +103,24 @@
             <article class="panel">
                 <div class="section-heading">
                     <div>
-                        <h2>Publish TimerApp Update</h2>
-                        <p class="card-subtitle">Publish a Google Drive download link so TimerApp clients can detect the newest release.</p>
+                        <h2>Publish Software Update</h2>
+                        <p class="card-subtitle">Publish a product-specific Google Drive release.</p>
                     </div>
                 </div>
 
                 <form method="POST" action="/admin/updates">
                     <input type="hidden" name="_token" value={csrfToken} />
+
+                    <div class="field">
+                        <label for="product_type">Product</label>
+                        <select id="product_type" name="product_type" bind:value={updateProductType} required>
+                            <option value="timer_app">Timer App</option>
+                            <option value="dtimer_wifi">DTimer WiFi</option>
+                        </select>
+                        {#if errors?.product_type}
+                            <div class="field-error">{errors.product_type}</div>
+                        {/if}
+                    </div>
 
                     <div class="field">
                         <label for="version">Version</label>
@@ -116,7 +129,7 @@
 
                     <div class="field">
                         <label for="title">Release title</label>
-                        <input id="title" type="text" name="title" placeholder="TimerApp 1.2.0" required />
+                        <input id="title" type="text" name="title" placeholder={`${updateProductLabel} 1.2.0`} required />
                     </div>
 
                     <div class="field">
@@ -140,7 +153,7 @@
                         {/if}
                     </div>
 
-                    <button type="submit" class="primary-button">Publish Update</button>
+                    <button type="submit" class="primary-button">Publish {updateProductLabel} Update</button>
                 </form>
             </article>
 
@@ -181,7 +194,7 @@
 
             <article class="panel">
                 <div class="section-heading">
-                    <h3>Recent App Updates</h3>
+                    <h3>Recent Software Updates</h3>
                     <span class="chip">{updates.length} release{updates.length === 1 ? '' : 's'}</span>
                 </div>
 
@@ -194,8 +207,9 @@
                                         <strong>{update.title}</strong>
                                         <div class="tag-row">
                                             {#if update.isActive}
-                                                <span class="pill-tag">Current Live Release</span>
+                                                <span class="pill-tag">Current {update.productLabel} Release</span>
                                             {/if}
+                                            <span class="pill-tag">{update.productLabel}</span>
                                             <span class="pill-tag">Version {update.version}</span>
                                         </div>
                                     </div>
@@ -224,7 +238,7 @@
                         {/each}
                     </div>
                 {:else}
-                    <div class="empty-state">No TimerApp updates have been published yet.</div>
+                    <div class="empty-state">No software updates have been published yet.</div>
                 {/if}
             </article>
         </div>

@@ -15,9 +15,11 @@ class AppUpdateIndexApiTest extends TestCase
         $older = $this->createUpdate('1.0.0', now()->subDays(2));
         $newer = $this->createUpdate('1.2.0', now()->subDay());
         $future = $this->createUpdate('2.0.0', now()->addDay());
+        $wifi = $this->createUpdate('1.0.3', now()->subHour(), AppUpdate::TYPE_DTIMER_WIFI);
 
         $this->getJson('/api/v1/updates')
             ->assertOk()
+            ->assertJsonPath('product', AppUpdate::TYPE_TIMER_APP)
             ->assertJsonPath('has_updates', true)
             ->assertJsonCount(2, 'updates')
             ->assertJsonPath('updates.0.id', $newer->id)
@@ -29,11 +31,23 @@ class AppUpdateIndexApiTest extends TestCase
             ->assertJsonPath('current_version', '1.0.0')
             ->assertJsonCount(1, 'updates')
             ->assertJsonPath('updates.0.version', '1.2.0');
+
+        $this->getJson('/api/v1/updates?product=dtimer_wifi')
+            ->assertOk()
+            ->assertJsonPath('product', AppUpdate::TYPE_DTIMER_WIFI)
+            ->assertJsonCount(1, 'updates')
+            ->assertJsonPath('updates.0.id', $wifi->id)
+            ->assertJsonPath('updates.0.productType', AppUpdate::TYPE_DTIMER_WIFI);
     }
 
-    private function createUpdate(string $version, mixed $publishedAt): AppUpdate
+    private function createUpdate(
+        string $version,
+        mixed $publishedAt,
+        string $productType = AppUpdate::TYPE_TIMER_APP,
+    ): AppUpdate
     {
         return AppUpdate::query()->create([
+            'product_type' => $productType,
             'title' => "DTimer {$version}",
             'version' => $version,
             'description' => "Release {$version}",

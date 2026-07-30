@@ -103,10 +103,12 @@ DTIMER_UPDATE_BASE_URL=https://dtimerapp.online
 DTIMER_USB_UPDATE_PATHS=/media,/mnt,/run/media
 ```
 
-Online discovery uses `/api/v1/updates` when the server supports release
-history, reads the public `/support` release list on older servers, and finally
-falls back to `/api/v1/updates/latest`. For USB discovery, copy packages named
-like this anywhere within three folders of a configured mount:
+Online discovery uses `/api/v1/updates?product=dtimer_wifi` when the server
+supports release history, reads DTimer WiFi entries from the public `/support`
+release list on older servers, and finally falls back to
+`/api/v1/updates/latest?product=dtimer_wifi`. Timer App releases are ignored.
+For USB discovery, copy packages named like this anywhere within three folders
+of a configured mount:
 
 ```text
 dtimer-orange-pi_1.0.3_all.deb

@@ -8,7 +8,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AppUpdate extends Model
 {
+    public const TYPE_TIMER_APP = 'timer_app';
+    public const TYPE_DTIMER_WIFI = 'dtimer_wifi';
+
+    public const PRODUCT_LABELS = [
+        self::TYPE_TIMER_APP => 'Timer App',
+        self::TYPE_DTIMER_WIFI => 'DTimer WiFi',
+    ];
+
     protected $fillable = [
+        'product_type',
         'title',
         'version',
         'description',
@@ -25,6 +34,20 @@ class AppUpdate extends Model
         'is_active' => 'boolean',
         'published_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (AppUpdate $update): void {
+            if (! array_key_exists((string) $update->product_type, self::PRODUCT_LABELS)) {
+                $update->product_type = self::TYPE_TIMER_APP;
+            }
+        });
+    }
+
+    public function scopeForProduct(Builder $query, string $productType): Builder
+    {
+        return $query->where('product_type', $productType);
+    }
 
     public function scopePublished(Builder $query): Builder
     {
@@ -49,6 +72,8 @@ class AppUpdate extends Model
     {
         return [
             'id' => $this->id,
+            'productType' => $this->product_type,
+            'productLabel' => self::PRODUCT_LABELS[$this->product_type] ?? 'Software',
             'title' => $this->title,
             'version' => $this->version,
             'description' => $this->description,

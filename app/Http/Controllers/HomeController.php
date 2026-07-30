@@ -21,6 +21,7 @@ class HomeController extends Controller
             ->values();
 
         $latestUpdate = AppUpdate::query()
+            ->forProduct(AppUpdate::TYPE_TIMER_APP)
             ->published()
             ->where('is_active', true)
             ->latest('published_at')
