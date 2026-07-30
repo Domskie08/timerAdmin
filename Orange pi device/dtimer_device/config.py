@@ -10,6 +10,7 @@ class DeviceConfig:
     database_path: Path
     firewall_state_path: Path
     active_sessions_path: Path
+    branding_dir: Path
     static_dir: Path
     project_dir: Path
 
@@ -23,6 +24,7 @@ class DeviceConfig:
             database_path=resolved_data_dir / "dtimer-orange-pi.sqlite3",
             firewall_state_path=resolved_data_dir / "firewall-state.json",
             active_sessions_path=resolved_data_dir / "active-sessions.json",
+            branding_dir=resolved_data_dir / "branding",
             static_dir=project_dir / "frontend" / "dist",
             project_dir=project_dir,
         )

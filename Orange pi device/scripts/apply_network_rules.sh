@@ -2,8 +2,22 @@
 set -euo pipefail
 
 STATE_FILE="${1:-}"
-CUSTOMER_IFACE="${DTIMER_CUSTOMER_INTERFACE:-wlan0}"
-WAN_IFACE="${DTIMER_WAN_INTERFACE:-eth0}"
+RUNTIME_CONFIG="${DTIMER_RUNTIME_NETWORK_CONFIG:-/run/dtimer-orange-pi/network.env}"
+
+if [[ -f "${RUNTIME_CONFIG}" ]]; then
+  # shellcheck disable=SC1090
+  source "${RUNTIME_CONFIG}"
+fi
+
+CUSTOMER_IFACE="${DTIMER_CUSTOMER_INTERFACE:-auto}"
+WAN_IFACE="${DTIMER_WAN_INTERFACE:-auto}"
+
+if [[ "${CUSTOMER_IFACE}" == "auto" ]] || ! ip link show "${CUSTOMER_IFACE}" >/dev/null 2>&1; then
+  CUSTOMER_IFACE="${DTIMER_DETECTED_CUSTOMER_INTERFACE:-}"
+fi
+if [[ "${WAN_IFACE}" == "auto" ]] || ! ip link show "${WAN_IFACE}" >/dev/null 2>&1; then
+  WAN_IFACE="${DTIMER_DETECTED_WAN_INTERFACE:-}"
+fi
 
 if [[ -z "${STATE_FILE}" || ! -f "${STATE_FILE}" ]]; then
   echo "Usage: apply_network_rules.sh /path/to/active-sessions.json" >&2
@@ -13,6 +27,16 @@ fi
 if ! command -v nft >/dev/null 2>&1; then
   echo "nft command was not found. Install nftables." >&2
   exit 3
+fi
+
+if [[ -z "${CUSTOMER_IFACE}" ]] || ! ip link show "${CUSTOMER_IFACE}" >/dev/null 2>&1; then
+  echo "Customer interface was not detected. Run configure_usb_customer_lan.sh first." >&2
+  exit 4
+fi
+
+if [[ -z "${WAN_IFACE}" ]] || ! ip link show "${WAN_IFACE}" >/dev/null 2>&1; then
+  echo "WAN interface was not detected. Check DTIMER_WAN_INTERFACE." >&2
+  exit 5
 fi
 
 mapfile -t ALLOWED_V4 < <(

@@ -109,6 +109,15 @@ def validate_cidr_list(value: object) -> str:
     return ",".join(networks)
 
 
+def validate_portal_passcode(value: object, field: str = "Passcode") -> str:
+    passcode = require_string(value, field, max_length=63)
+    if len(passcode) < 8:
+        raise ValidationError(f"{field} must be at least 8 characters.")
+    if not any(character.isalpha() for character in passcode) or not any(character.isdigit() for character in passcode):
+        raise ValidationError(f"{field} must include a letter and a number.")
+    return passcode
+
+
 def validate_settings(payload: dict[str, object]) -> dict[str, str]:
     validated: dict[str, str] = {}
 
@@ -138,6 +147,13 @@ def validate_settings(payload: dict[str, object]) -> dict[str, str]:
         validated["coin_amount_minor"] = str(validate_int(payload.get("coin_amount_minor"), "Coin amount", 1, 1000000))
     if "currency" in payload:
         validated["currency"] = require_string(payload.get("currency"), "Currency", max_length=3).upper()
+    if "portal_brand_name" in payload:
+        validated["portal_brand_name"] = require_string(payload.get("portal_brand_name"), "Portal brand name", max_length=40)
+    if "portal_logo_style" in payload:
+        logo_style = require_string(payload.get("portal_logo_style"), "Portal logo style", max_length=20)
+        if logo_style not in {"signal", "monogram", "wordmark", "custom"}:
+            raise ValidationError("Portal logo style is invalid.")
+        validated["portal_logo_style"] = logo_style
     if "offline_mode" in payload:
         validated["offline_mode"] = optional_bool(payload.get("offline_mode"))
     if "network_enforcement_enabled" in payload:

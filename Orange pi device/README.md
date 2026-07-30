@@ -72,8 +72,48 @@ Open:
 - App code: `/opt/dtimer-orange-pi`
 - Config: `/etc/dtimer-orange-pi/dtimer.conf`
 - Data/database: `/var/lib/dtimer-orange-pi`
+- Uploaded portal branding: `/var/lib/dtimer-orange-pi/branding`
 - Logs: `/var/log/dtimer-orange-pi`
 - Service: `/etc/systemd/system/dtimer-orange-pi.service`
+
+## Portal Branding
+
+The Admin dashboard controls the DTimerFi display name, built-in logo style,
+custom logo, and top banner. Custom JPG, PNG, and WebP files are validated and
+stored inside the device data directory. Both image controls include a restore
+default action.
+
+The customer Account view shows the current IP, detected MAC, session state,
+and remaining time. An administrator sets the initial portal passcode, and a
+customer who knows the current passcode can replace it. The passcode is hashed
+before storage and repeated failures use the same lockout policy as admin
+login. This is an application-level portal passcode; it does not rewrite an
+external access point or a separate `hostapd` configuration.
+
+## Software Update Discovery
+
+The admin dashboard can check the configured TimerAdmin server and mounted USB
+storage for available releases. This is discovery-only: it lists packages and
+download links but does not install them automatically.
+
+The package defaults are:
+
+```text
+DTIMER_UPDATE_BASE_URL=https://dtimerapp.online
+DTIMER_USB_UPDATE_PATHS=/media,/mnt,/run/media
+```
+
+Online discovery uses `/api/v1/updates` when the server supports release
+history, reads the public `/support` release list on older servers, and finally
+falls back to `/api/v1/updates/latest`. For USB discovery, copy packages named
+like this anywhere within three folders of a configured mount:
+
+```text
+dtimer-orange-pi_1.0.3_all.deb
+```
+
+The Orange Pi validates Debian package metadata with `dpkg-deb` before marking
+a USB package as verified.
 
 ## Security Notes
 
@@ -85,6 +125,8 @@ Open:
   - Login lockout after repeated failures.
   - Default password must be changed before setup.
   - `device_secret` is not returned by normal APIs.
+  - Portal passcode hashes are not returned by normal APIs.
+  - Branding uploads accept only validated JPG, PNG, and WebP content.
   - Firewall enforcement is dry-run until explicitly enabled.
   - systemd runs the app as a dedicated `dtimer` user.
 
@@ -94,22 +136,25 @@ The Svelte UI and Python API decide who has paid time. The Orange Pi Linux firew
 
 Recommended USB-to-LAN wiring:
 
-- Built-in Orange Pi LAN port: ISP/router input, usually `eth0`
-- USB-to-LAN adapter: customer/output side to access point or switch, usually `eth1`
+- Built-in Orange Pi LAN port: ISP/router input, often `end0` on current images
+- USB-to-LAN adapter: customer/output side to access point or switch, often `enx...`
 - Customer portal after customer LAN setup: `http://10.0.0.1:8080/`
 - Local admin after customer LAN setup: `http://10.0.0.1:8080/admin`
 
-Check interface names on the Orange Pi:
-
-```bash
-ip link
-```
-
-If the USB-to-LAN adapter is not `eth1`, edit `/etc/dtimer-orange-pi/dtimer.conf` and replace `eth1` with the actual USB adapter name:
+Automatic detection is enabled by default:
 
 ```text
-DTIMER_WAN_INTERFACE=eth0
-DTIMER_CUSTOMER_INTERFACE=eth1
+DTIMER_WAN_INTERFACE=auto
+DTIMER_CUSTOMER_INTERFACE=auto
+```
+
+The setup script follows the default route for WAN and identifies the customer
+adapter from its USB device path. If multiple USB network adapters are
+connected, edit `/etc/dtimer-orange-pi/dtimer.conf` and set the customer
+interface explicitly:
+
+```text
+DTIMER_CUSTOMER_INTERFACE=enx00e04c580166
 ```
 
 If `dnsmasq` fails at boot, check the exact reason:
@@ -120,11 +165,13 @@ journalctl -u dnsmasq -b --no-pager | tail -40
 ip link
 ```
 
-Most failures mean the USB-to-LAN adapter name is different from `eth1`. Update `DTIMER_CUSTOMER_INTERFACE`, then restart:
+The customer-LAN service normally detects renamed interfaces and regenerates
+the `dnsmasq` configuration automatically. To rerun detection and restart
+`dnsmasq`:
 
 ```bash
 sudo systemctl restart dtimer-orange-pi-customer-lan
-sudo systemctl restart dnsmasq
+systemctl status dnsmasq --no-pager
 ```
 
 To configure the USB-to-LAN side with `10.0.0.1/20` and DHCP:

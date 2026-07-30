@@ -29,6 +29,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::get('/updates/latest', [TimerAppController::class, 'latestUpdate'])
         ->name('updates.latest');
 
+    Route::get('/updates', [TimerAppController::class, 'updates'])
+        ->name('updates.index');
+
     Route::get('/updates/{appUpdate}/download', [TimerAppController::class, 'download'])
         ->whereNumber('appUpdate')
         ->name('updates.download');

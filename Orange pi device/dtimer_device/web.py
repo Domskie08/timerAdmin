@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import binascii
 import ipaddress
 import json
 import mimetypes
@@ -17,11 +19,27 @@ from .network import client_ip_from_headers, resolve_client_mac
 from .security import csrf_token_for_session, sign_session, verify_csrf_token, verify_session
 from .store import DeviceStore
 from .sync import TimerAdminSync
-from .validators import ValidationError, require_string, validate_int, validate_ip, validate_mac, validate_settings
+from .updates import DEFAULT_UPDATE_BASE_URL, UpdateChecker, parse_usb_roots
+from .validators import (
+    ValidationError,
+    require_string,
+    validate_int,
+    validate_ip,
+    validate_mac,
+    validate_portal_passcode,
+    validate_settings,
+)
 
 
 SESSION_COOKIE = "dtimer_admin_session"
 MAX_JSON_BYTES = 64 * 1024
+MAX_BRANDING_JSON_BYTES = 5 * 1024 * 1024
+BRANDING_IMAGE_LIMITS = {"logo": 1024 * 1024, "banner": 3 * 1024 * 1024}
+BRANDING_IMAGE_TYPES = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+}
 CAPTIVE_PORTAL_PATHS = {
     "/connecttest.txt",
     "/ncsi.txt",
@@ -33,15 +51,49 @@ CAPTIVE_PORTAL_PATHS = {
 }
 
 
+def decode_branding_image(image_data: object, kind: str) -> tuple[bytes, str]:
+    value = require_string(image_data, "Image", max_length=MAX_BRANDING_JSON_BYTES)
+    try:
+        header, encoded = value.split(",", 1)
+        mime_type = header.removeprefix("data:").removesuffix(";base64")
+        extension = BRANDING_IMAGE_TYPES[mime_type]
+        content = base64.b64decode(encoded, validate=True)
+    except (ValueError, KeyError, binascii.Error):
+        raise ValidationError("Use a valid JPG, PNG, or WebP image.") from None
+
+    if len(content) > BRANDING_IMAGE_LIMITS[kind]:
+        limit_mb = BRANDING_IMAGE_LIMITS[kind] // (1024 * 1024)
+        raise ValidationError(f"The {kind} image must be {limit_mb} MB or smaller.")
+
+    valid_signature = (
+        (extension == "jpg" and content.startswith(b"\xff\xd8\xff"))
+        or (extension == "png" and content.startswith(b"\x89PNG\r\n\x1a\n"))
+        or (extension == "webp" and len(content) >= 12 and content.startswith(b"RIFF") and content[8:12] == b"WEBP")
+    )
+    if not valid_signature:
+        raise ValidationError("The uploaded image content does not match its file type.")
+
+    return content, extension
+
+
 def serve(config: DeviceConfig, store: DeviceStore, host: str, port: int) -> None:
     handler = make_handler(config, store)
     server = ThreadingHTTPServer((host, port), handler)
     server.serve_forever()
 
 
-def make_handler(config: DeviceConfig, store: DeviceStore) -> type[BaseHTTPRequestHandler]:
+def make_handler(
+    config: DeviceConfig,
+    store: DeviceStore,
+    update_checker: UpdateChecker | None = None,
+) -> type[BaseHTTPRequestHandler]:
     firewall = FirewallController(config, store)
     syncer = TimerAdminSync(store)
+    checker = update_checker or UpdateChecker(
+        base_url=os.getenv("DTIMER_UPDATE_BASE_URL", DEFAULT_UPDATE_BASE_URL),
+        usb_roots=parse_usb_roots(os.getenv("DTIMER_USB_UPDATE_PATHS")),
+        fallback_version=os.getenv("DTIMER_APP_VERSION", store.get_setting("app_version", "")),
+    )
 
     class DTimerRequestHandler(BaseHTTPRequestHandler):
         server_version = "DTimerOrangePi/0.1"
@@ -68,10 +120,21 @@ def make_handler(config: DeviceConfig, store: DeviceStore) -> type[BaseHTTPReque
                             "admin": admin,
                             "csrfToken": csrf_token_for_session(cookie, self.session_secret()),
                             "settings": store.settings(),
+                            "branding": self.branding_payload(),
                             "stats": store.stats(),
                             "sessions": [session.to_dict() for session in store.recent_sessions()],
                         }
                     )
+                return
+
+            if path == "/api/admin/updates":
+                admin = self.require_admin()
+                if admin:
+                    self.send_json(checker.check())
+                return
+
+            if path.startswith("/branding/"):
+                self.serve_branding_asset(path)
                 return
 
             if path.startswith("/assets/") or path in {"/favicon.ico", "/vite.svg"}:
@@ -85,6 +148,10 @@ def make_handler(config: DeviceConfig, store: DeviceStore) -> type[BaseHTTPReque
             try:
                 if path == "/api/login":
                     self.handle_login()
+                    return
+
+                if path == "/api/account/passcode":
+                    self.handle_portal_passcode_change()
                     return
 
                 if path == "/api/logout":
@@ -122,6 +189,14 @@ def make_handler(config: DeviceConfig, store: DeviceStore) -> type[BaseHTTPReque
                     self.handle_settings_update()
                     return
 
+                if path == "/api/admin/portal-passcode":
+                    self.handle_admin_portal_passcode()
+                    return
+
+                if path == "/api/admin/branding":
+                    self.handle_branding_update()
+                    return
+
                 if path == "/api/sessions":
                     self.handle_session_create()
                     return
@@ -149,8 +224,13 @@ def make_handler(config: DeviceConfig, store: DeviceStore) -> type[BaseHTTPReque
                 {
                     "device": store.get_setting("device_name", "DTimer Orange Pi"),
                     "clientIp": client_ip,
+                    "clientMac": resolve_client_mac(client_ip),
                     "activeSession": session.to_dict() if session else None,
                     "stats": store.stats(),
+                    "branding": self.branding_payload(),
+                    "account": {
+                        "passcodeConfigured": store.portal_passcode_configured(),
+                    },
                     "rates": {
                         "minutesPerCoin": int(store.get_setting("rate_minutes_per_coin", "5") or 5),
                         "coinAmountMinor": int(store.get_setting("coin_amount_minor", "500") or 500),
@@ -222,6 +302,102 @@ def make_handler(config: DeviceConfig, store: DeviceStore) -> type[BaseHTTPReque
 
             store.update_settings(validated)
             self.send_json({"ok": True, "settings": store.settings()})
+
+        def handle_admin_portal_passcode(self) -> None:
+            payload = self.read_json()
+            passcode = validate_portal_passcode(payload.get("newPasscode"), "New passcode")
+            store.set_portal_passcode(passcode)
+            self.send_json(
+                {
+                    "ok": True,
+                    "message": "Portal passcode updated.",
+                    "settings": store.settings(),
+                }
+            )
+
+        def handle_portal_passcode_change(self) -> None:
+            client_ip = client_ip_from_headers(self.client_address, self.headers)
+            identity = f"portal-passcode|{client_ip}"
+            locked_until = store.login_locked_until(identity)
+            if locked_until:
+                self.send_json(
+                    {"ok": False, "message": "Too many attempts. Try again later.", "lockedUntil": locked_until},
+                    HTTPStatus.TOO_MANY_REQUESTS,
+                )
+                return
+
+            if not store.portal_passcode_configured():
+                self.send_json(
+                    {"ok": False, "message": "The portal passcode has not been configured by the administrator."},
+                    HTTPStatus.CONFLICT,
+                )
+                return
+
+            payload = self.read_json()
+            current_passcode = require_string(payload.get("currentPasscode"), "Current passcode", max_length=63)
+            new_passcode = validate_portal_passcode(payload.get("newPasscode"), "New passcode")
+            if not store.verify_portal_passcode(current_passcode):
+                store.record_login_failure(identity)
+                self.send_json({"ok": False, "message": "Current passcode is incorrect."}, HTTPStatus.UNAUTHORIZED)
+                return
+
+            store.clear_login_failures(identity)
+            store.set_portal_passcode(new_passcode)
+            self.send_json({"ok": True, "message": "Your portal passcode was changed."})
+
+        def handle_branding_update(self) -> None:
+            payload = self.read_json(MAX_BRANDING_JSON_BYTES)
+            kind = require_string(payload.get("kind"), "Branding type", max_length=10)
+            if kind not in BRANDING_IMAGE_LIMITS:
+                raise ValidationError("Branding type must be logo or banner.")
+
+            setting_key = f"portal_{kind}_file"
+            old_filename = store.get_setting(setting_key)
+            action = require_string(payload.get("action") or "upload", "Action", max_length=10)
+            if action == "reset":
+                if old_filename and Path(old_filename).name == old_filename:
+                    (config.branding_dir / old_filename).unlink(missing_ok=True)
+                values = {setting_key: ""}
+                if kind == "logo" and store.get_setting("portal_logo_style") == "custom":
+                    values["portal_logo_style"] = "signal"
+                store.update_settings(values)
+                self.send_json(
+                    {
+                        "ok": True,
+                        "message": f"{kind.title()} restored to default.",
+                        "branding": self.branding_payload(),
+                        "settings": store.settings(),
+                    }
+                )
+                return
+
+            if action != "upload":
+                raise ValidationError("Branding action is invalid.")
+
+            content, extension = decode_branding_image(payload.get("imageData"), kind)
+            config.branding_dir.mkdir(parents=True, exist_ok=True)
+            filename = f"{kind}.{extension}"
+            target = config.branding_dir / filename
+            temporary = config.branding_dir / f".{filename}.upload"
+            temporary.write_bytes(content)
+            temporary.replace(target)
+
+            for existing in config.branding_dir.glob(f"{kind}.*"):
+                if existing != target and existing.is_file():
+                    existing.unlink(missing_ok=True)
+
+            values = {setting_key: filename}
+            if kind == "logo":
+                values["portal_logo_style"] = "custom"
+            store.update_settings(values)
+            self.send_json(
+                {
+                    "ok": True,
+                    "message": f"{kind.title()} uploaded.",
+                    "branding": self.branding_payload(),
+                    "settings": store.settings(),
+                }
+            )
 
         def handle_session_create(self) -> None:
             payload = self.read_json()
@@ -332,9 +508,9 @@ def make_handler(config: DeviceConfig, store: DeviceStore) -> type[BaseHTTPReque
 
             return False
 
-        def read_json(self) -> dict[str, Any]:
+        def read_json(self, max_bytes: int = MAX_JSON_BYTES) -> dict[str, Any]:
             length = int(self.headers.get("Content-Length", "0") or 0)
-            if length > MAX_JSON_BYTES:
+            if length > max_bytes:
                 raise ValidationError("Request body is too large.")
 
             raw = self.rfile.read(length) if length else b"{}"
@@ -359,6 +535,16 @@ def make_handler(config: DeviceConfig, store: DeviceStore) -> type[BaseHTTPReque
             self.end_headers()
             self.wfile.write(body)
 
+        def branding_payload(self) -> dict[str, Any]:
+            logo_file = store.get_setting("portal_logo_file")
+            banner_file = store.get_setting("portal_banner_file")
+            return {
+                "name": store.get_setting("portal_brand_name", "DTimerFi"),
+                "logoStyle": store.get_setting("portal_logo_style", "signal"),
+                "logoUrl": f"/branding/{logo_file}" if logo_file else None,
+                "bannerUrl": f"/branding/{banner_file}" if banner_file else None,
+            }
+
         def redirect_to_portal(self) -> None:
             customer_address = os.getenv("DTIMER_CUSTOMER_ADDRESS", "10.0.0.1/20").split("/", 1)[0]
             port = os.getenv("DTIMER_PORT", "8080")
@@ -382,6 +568,32 @@ def make_handler(config: DeviceConfig, store: DeviceStore) -> type[BaseHTTPReque
             self.send_header("Content-Type", mimetypes.guess_type(str(static_path))[0] or "application/octet-stream")
             self.send_header("Content-Length", str(len(content)))
             self.send_header("Cache-Control", "public, max-age=31536000, immutable")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            self.wfile.write(content)
+
+        def serve_branding_asset(self, path: str) -> None:
+            filename = unquote(path.removeprefix("/branding/"))
+            allowed = {
+                store.get_setting("portal_logo_file"),
+                store.get_setting("portal_banner_file"),
+            }
+            if not filename or filename not in allowed or Path(filename).name != filename:
+                self.send_response(HTTPStatus.NOT_FOUND)
+                self.end_headers()
+                return
+
+            asset = config.branding_dir / filename
+            if not asset.is_file():
+                self.send_response(HTTPStatus.NOT_FOUND)
+                self.end_headers()
+                return
+
+            content = asset.read_bytes()
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", mimetypes.guess_type(str(asset))[0] or "application/octet-stream")
+            self.send_header("Content-Length", str(len(content)))
+            self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.end_headers()
             self.wfile.write(content)

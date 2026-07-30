@@ -277,6 +277,31 @@ class TimerAppController extends Controller
         ]);
     }
 
+    public function updates(Request $request): JsonResponse
+    {
+        $currentVersion = $request->string('current_version')->trim()->toString();
+        $onlyNewer = $request->boolean('only_newer');
+        $updates = AppUpdate::query()
+            ->published()
+            ->latest('published_at')
+            ->latest('id')
+            ->limit(100)
+            ->get()
+            ->filter(
+                fn (AppUpdate $update): bool => ! $onlyNewer
+                    || $currentVersion === ''
+                    || version_compare($update->version, $currentVersion, '>')
+            )
+            ->values()
+            ->map(fn (AppUpdate $update): array => $update->toPublicArray());
+
+        return response()->json([
+            'current_version' => $currentVersion ?: null,
+            'has_updates' => $updates->isNotEmpty(),
+            'updates' => $updates,
+        ]);
+    }
+
     public function download(AppUpdate $appUpdate): RedirectResponse|StreamedResponse
     {
         abort_unless($appUpdate->isPublished(), 404);

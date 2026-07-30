@@ -193,6 +193,11 @@ class DeviceStore:
             "rate_minutes_per_coin": "5",
             "coin_amount_minor": "500",
             "currency": "PHP",
+            "portal_brand_name": "DTimerFi",
+            "portal_logo_style": "signal",
+            "portal_logo_file": "",
+            "portal_banner_file": "",
+            "portal_passcode_hash": "",
             "offline_mode": "1",
             "network_enforcement_enabled": "0",
             "coin_api_token": "",
@@ -356,8 +361,10 @@ class DeviceStore:
 
         device_secret = settings.pop("device_secret", "")
         coin_api_token = settings.pop("coin_api_token", "")
+        portal_passcode_hash = settings.pop("portal_passcode_hash", "")
         settings["device_secret_configured"] = bool(device_secret)
         settings["coin_api_token_configured"] = bool(coin_api_token)
+        settings["portal_passcode_configured"] = bool(portal_passcode_hash)
         return settings
 
     def update_settings(self, values: dict[str, str]) -> None:
@@ -375,6 +382,11 @@ class DeviceStore:
             "rate_minutes_per_coin",
             "coin_amount_minor",
             "currency",
+            "portal_brand_name",
+            "portal_logo_style",
+            "portal_logo_file",
+            "portal_banner_file",
+            "portal_passcode_hash",
             "offline_mode",
             "network_enforcement_enabled",
             "coin_api_token",
@@ -395,6 +407,16 @@ class DeviceStore:
                     """,
                     (key, str(value).strip(), now),
                 )
+
+    def portal_passcode_configured(self) -> bool:
+        return bool(self.get_setting("portal_passcode_hash"))
+
+    def verify_portal_passcode(self, passcode: str) -> bool:
+        encoded = self.get_setting("portal_passcode_hash")
+        return bool(encoded) and verify_password(passcode, encoded)
+
+    def set_portal_passcode(self, passcode: str) -> None:
+        self.update_settings({"portal_passcode_hash": hash_password(passcode)})
 
     def create_paid_session(
         self,
